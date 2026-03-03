@@ -2,7 +2,7 @@ import re
 import time
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -241,7 +241,7 @@ class ReteInformaticaLavoroScraper(BaseScraper):
             return match.group(1).strip()
         return None
 
-    def _extract_salary(self, page_text: str) -> tuple[Optional[float], Optional[float]]:
+    def _extract_salary(self, page_text: str) -> Tuple[Optional[float], Optional[float]]:
         range_match = _RAL_RANGE_RE.search(page_text)
         if range_match:
             return _parse_salary(range_match.group(1)), _parse_salary(range_match.group(2))
