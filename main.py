@@ -22,6 +22,7 @@ from scrapers.remoteok_scraper import RemoteOKScraper
 from scrapers.arbeitnow_scraper import ArbeitnowScraper
 from scrapers.jobicy_scraper import JobicyScraper
 from scrapers.iprogrammatori_scraper import IProgrammatoriScraper
+from scrapers.reteinformaticalavoro_scraper import ReteInformaticaLavoroScraper
 from scrapers.linkedin_scraper import LinkedInScraper
 from scrapers.techmap_scraper import TechMapScraper
 from scrapers.jobscollider_scraper import JobsColliderScraper
@@ -61,6 +62,7 @@ class JobScraperOrchestrator:
         self.scrapers = [
             LinkedInScraper(),  # LinkedIn FIRST (uses free public API)
             IProgrammatoriScraper(),
+            ReteInformaticaLavoroScraper(),
             ArbeitnowScraper(),
             JobicyScraper(),
             RemoteOKScraper(),
