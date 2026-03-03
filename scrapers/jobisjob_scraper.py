@@ -1,9 +1,12 @@
+import warnings
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import logging
 from datetime import datetime
 from typing import List, Dict
 from .base_scraper import BaseScraper
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 logger = logging.getLogger(__name__)
 
