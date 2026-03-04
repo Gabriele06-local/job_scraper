@@ -206,12 +206,23 @@ class LinkedInScraper(BaseScraper):
             soup = BeautifulSoup(response.text, "html.parser")
 
             # Extract description using the most precise container available
-            # 1. Look for the specific SDUI component suggested by the user
+            # 0. Most precise: componentkey="JobDetails_AboutTheJob_*" (modern LinkedIn pages)
+            #    This targets ONLY the job description block, excluding related jobs, referral
+            #    banners, sign-in prompts, and any other LinkedIn noise.
             desc_elem = soup.find(
                 attrs={
-                    "data-sdui-component": "com.linkedin.sdui.generated.jobseeker.dsl.impl.aboutTheJob"
+                    "componentkey": lambda v: v
+                    and v.startswith("JobDetails_AboutTheJob_")
                 }
             )
+
+            # 1. Fallback: SDUI component attribute
+            if not desc_elem:
+                desc_elem = soup.find(
+                    attrs={
+                        "data-sdui-component": "com.linkedin.sdui.generated.jobseeker.dsl.impl.aboutTheJob"
+                    }
+                )
 
             # 2. Fallback to the markup container typically found in Guest API
             if not desc_elem:
