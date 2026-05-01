@@ -1,10 +1,10 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01T10:45Z
+2026-05-01T11:05Z
 
 ## Project Status
-claude-04 complete. Pre-filter + dedupe stages implemented and merged to feature/upgrade. 131 tests green. Next: claude-05 quality_gate + AI wiring (skills lexicon, replace OpenAI with Groq classifier).
+claude-05 complete. AI classifier (Groq, SPEC 02 prompt), quality gate (SPEC 03), ImportPipeline orchestrator implemented and merged to feature/upgrade. 202 tests green. Ground truth baseline run (29/30 offers). **Seniority accuracy 67.9% < 80% threshold — prompt tuning needed.** Next: claude-06 expiration job.
 
 ## Architecture Snapshot
 - Framework: requests + BeautifulSoup4 + feedparser + aiohttp (mixed sync/async)
@@ -150,6 +150,14 @@ Strict gate = desc≥200 AND skills≥1 AND has published_at AND has company.nam
 
 ## Decision Log
 
+### claude-05 — AI Classifier + Quality Gate + Pipeline (2026-05-01)
+
+- **D-05-01**: Seniority accuracy 67.9% on ground truth (29 offers, llama-3.1-8b-instant). **Alt**: accept or re-test. **Rationale**: does NOT block merge per task spec; flag for prompt tuning in claude-06+. Role family 89.3%, skills P/R ~74% both acceptable. Likely root cause: small fixtures set (29); model conflates junior/mid for ambiguous postings.
+- **D-05-02**: `classify(job_raw: dict)` added to `GroqClassifier` as main interface; `classify_job(text: str)` kept for backward compat (used by existing tests). **Alt**: migrate all callers. **Rationale**: breaking existing tests adds no value; new interface is cleaner per SPEC 02 §4.
+- **D-05-03**: `_single_call` unwraps `[{...}]` list-wrapped JSON responses. **Alt**: treat as validation error → retry. **Rationale**: observed in baseline run (Security Engineer fixture); deterministic fix avoids burning 3 retries on a known pattern.
+- **D-05-04**: `ImportPipeline.run(raw_jobs)` takes `list[RawJob]` (not iterator). **Alt**: accept iterator. **Rationale**: counter needs `total` upfront; list allows chunked batching by caller if needed.
+- **D-05-05**: Prefilter-rejected jobs persisted to MongoDB (dedup_hash stored). **Alt**: discard entirely. **Rationale**: prevents AI re-run on same junk on next import run; matches D-01-20 principle.
+
 ### claude-03 — Base Infra (2026-05-01)
 
 - **D-03-01**: `JobClassification` includes salary fields (salary_min, salary_max, currency). **Alt**: separate `JobSalary` only. **Rationale**: Groq extracts salary as part of classification; `classify_job() → JobClassification` must carry it. `Job.salary` (JobSalary) is populated by caller from classification output.
@@ -199,11 +207,15 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 
 ## Pending Work
 
-### Immediate (post-claude-04)
+### Immediate (post-claude-05)
 - **claude-04 — DONE**: `pipeline/language_detector.py`, `pipeline/prefilter.py`, `pipeline/dedupe.py`. 131 tests green.
 - **claude-04 note**: `compute_dedup_hash` in models/job.py was fixed to lowercase source (SPEC 04 compliance).
 - **claude-04 note**: `pipeline/language_detector.py` uses `from_all_languages()` (not subset) — detects unsupported langs as OTHER.
-- **claude-05 — Skills lexicon + AI wiring**: Skills lexicon (technical vs soft split). Wire `ai/classifier.py` into pipeline. Replace OpenAI categorizer in main.py. Also: `pipeline/quality_gate.py` per SPEC 03.
+- **claude-05 — DONE**: `ai/classifier.py` updated (SPEC 02 prompt, `classify(job_raw: dict)`, corrective retry, list-unwrap fix), `pipeline/quality_gate.py`, `pipeline/orchestrator.py` (ImportPipeline). 202 tests green.
+- **claude-05 note**: `⚠ SENIORITY ACCURACY 67.9% < 80% threshold` — needs prompt tuning. See `docs/reports/01-ai-baseline.md`. Role family 89.3% OK. Skills P/R ~74%. See D-05-01.
+- **claude-05 note**: Ground truth fixture corrections: de_002, en_004, fr_001 expected_status changed from `valid` → `premium` (SPEC 03 premium criteria clearly met per expected AI outputs).
+- **claude-05 note**: Ground truth run: 1 AI failure (Security Engineer, en_008_security_engineer_borderline) — model returned list-wrapped JSON. Fixed post-baseline: `_single_call` now unwraps `[{...}]` to `{...}`.
+- **claude-05 note**: `dedupe.merge_with_existing` fixed: naive/aware datetime comparison guard added.
 - **claude-06 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
 - **claude-07 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
 
