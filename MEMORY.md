@@ -1,10 +1,10 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01
+2026-05-01T10:35Z
 
 ## Project Status
-Architecture phase complete (claude-01). 5 SPECs drafted: target pipeline, Mongo schema, AI classification, quality gate, dedupe & expiration. Discovery still applies. Next: claude-02 test scaffolding before refactor.
+Base infra complete (claude-03). Models, Mongo singleton, Groq classifier, structlog, pydantic-settings, ruff.toml all merged to feature/upgrade. 85 tests green. Next: claude-04 pipeline modules (normalize, prefilter, quality_gate).
 
 ## Architecture Snapshot
 - Framework: requests + BeautifulSoup4 + feedparser + aiohttp (mixed sync/async)
@@ -150,6 +150,13 @@ Strict gate = desc≥200 AND skills≥1 AND has published_at AND has company.nam
 
 ## Decision Log
 
+### claude-03 — Base Infra (2026-05-01)
+
+- **D-03-01**: `JobClassification` includes salary fields (salary_min, salary_max, currency). **Alt**: separate `JobSalary` only. **Rationale**: Groq extracts salary as part of classification; `classify_job() → JobClassification` must carry it. `Job.salary` (JobSalary) is populated by caller from classification output.
+- **D-03-02**: Invalid AI enum values coerced to defaults in `_GroqOutput` via `field_validator(mode='before')`. **Alt**: raise ValidationError. **Rationale**: AI sometimes returns novel strings; hard fail would mark job AI_UNAVAILABLE when classification is otherwise usable.
+- **D-03-03**: `ruff.toml` with `line-length=100` and per-file ignores for all legacy connectors/files. **Alt**: fix all legacy lint. **Rationale**: constraint "DO NOT touch existing connectors"; per-file ignores isolate legacy from new-code standards.
+- **D-03-04**: Skills lexicon split (technical_skills vs skills) deferred to claude-05. **Alt**: implement now. **Rationale**: lexicon is a separate concern requiring its own SPEC and test coverage; placeholder comment left in `classify_job`.
+
 ### claude-01 — Architecture Decisions (2026-05-01)
 Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 
@@ -192,14 +199,11 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 
 ## Pending Work
 
-### Immediate (post-claude-01)
-- **claude-02 — Test scaffolding**: pytest fixtures for Mongo, Groq mock, sample raw payloads per scraper. Pre-condition for any refactor.
-- **claude-03 — Config + logging**: Implement `config.py` (pydantic-settings) and `utils/logging.py` (structlog) per SPEC 00 §4, §7.
-- **claude-04 — Repository + indexes**: Refactor `database/mongo_client.py` → `database/repository.py`. Implement fail-loud `ensure_indexes`. Apply schema from SPEC 01.
-- **claude-05 — Pipeline modules**: `pipeline/normalize.py`, `prefilter.py`, `quality_gate.py`, `dedupe.py` per SPECs 02/03/04.
-- **claude-06 — AI classifier (Groq)**: Replace `ai/categorizer.py` (OpenAI) with `ai/classifier.py` (Groq) per SPEC 02. Skills lexicon committed.
-- **claude-07 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
-- **claude-08 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
+### Immediate (post-claude-03)
+- **claude-04 — Pipeline modules**: `pipeline/normalize.py`, `prefilter.py`, `quality_gate.py`, `dedupe.py` per SPECs 02/03/04.
+- **claude-05 — Skills lexicon + AI wiring**: Skills lexicon (technical vs soft split). Wire `ai/classifier.py` into pipeline. Replace OpenAI categorizer in main.py.
+- **claude-06 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
+- **claude-07 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
 
 ### Cross-repo (out of this repo)
 - **Bun API**: alias `link`↔`url`, `published_at`↔`posted_at`; accept `seniority` enum values `lead`, `principal`. Status: pending PR.
