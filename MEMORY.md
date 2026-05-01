@@ -1,10 +1,10 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01T11:05Z
+2026-05-01T12:00Z
 
 ## Project Status
-claude-05 complete. AI classifier (Groq, SPEC 02 prompt), quality gate (SPEC 03), ImportPipeline orchestrator implemented and merged to feature/upgrade. 202 tests green. Ground truth baseline run (29/30 offers). **Seniority accuracy 67.9% < 80% threshold — prompt tuning needed.** Next: claude-06 expiration job.
+claude-06 complete. Connectors refactored under `BaseConnector` interface (`connectors/` package). 10 enabled, 2 disabled (TechMap, JobsCollider). 223 tests green. **Seniority accuracy 67.9% < 80% threshold — prompt tuning still needed.** Next: claude-07 expiration job.
 
 ## Architecture Snapshot
 - Framework: requests + BeautifulSoup4 + feedparser + aiohttp (mixed sync/async)
@@ -16,15 +16,18 @@ claude-05 complete. AI classifier (Groq, SPEC 02 prompt), quality gate (SPEC 03)
 - Logging: stdlib `logging` to `job_scraper.log` (4.3 MB current). NOT structlog.
 
 ## Codebase Map
-- `main.py` — orchestrator, sync iter scrapers × keywords × langs (546 LOC)
+- `main.py` — legacy orchestrator, sync iter scrapers × keywords × langs (546 LOC)
+- `connectors/` — **NEW**: BaseConnector ABC + 12 connector adapters + registry
+- `connectors/__init__.py` — REGISTRY + get_enabled_connectors()
+- `connectors/base.py` — BaseConnector ABC + SourceType enum
 - `database/mongo_client.py` — pymongo client, upsert company/seniority, insert job (120 LOC)
 - `ai/categorizer.py` — OpenAI single-call JSON extractor (54 LOC)
 - `utils/deduplicator.py` — link-based dedup query (19 LOC)
 - `utils/geocoding.py` — Google Maps geocode (40 LOC)
 - `utils/description_fetcher.py` — async aiohttp HTML→Markdown (147 LOC)
 - `scrapers/base_scraper.py` — abstract base + HTML normalizer (133 LOC)
-- `scrapers/*.py` — 12 connectors (see Connectors Inventory)
-- `tests/` — 5 test files, mostly per-scraper (jobisjob, reteinformaticalavoro)
+- `scrapers/*.py` — 12 legacy connectors (wrapped by connectors/, unchanged)
+- `tests/` — test files inc. test_connectors_smoke.py (21 new tests)
 - `verify_connection.py`, `verify_linkedin_import.py` — manual verification scripts
 - `fix_dates.py`, `fix_cities.py` — one-shot data migration scripts
 
@@ -150,6 +153,14 @@ Strict gate = desc≥200 AND skills≥1 AND has published_at AND has company.nam
 
 ## Decision Log
 
+### claude-06 — Connectors Refactor (2026-05-01)
+
+- **D-06-01**: Adapter pattern (connectors/ wraps scrapers/) over in-place refactor. **Alt**: modify existing scraper classes directly. **Rationale**: scrapers/ already have ruff per-file ignores and working logic; adapter preserves both without touching extraction code.
+- **D-06-02**: `fetch() -> Iterator[dict]` wraps `asyncio.run(scraper.scrape())` in sync context. **Alt**: convert scrapers to sync. **Rationale**: scrapers are async in name only (use `requests`); asyncio.run() is safe in sync pipeline context without event loop.
+- **D-06-03**: Global connectors (Arbeitnow, RemoteOK, Jobicy) call `scrape(keyword="", lang="en")` once. **Alt**: iterate per keyword. **Rationale**: they do client-side filtering; `"" in str` is always True so empty keyword = all jobs; one HTTP call is more polite.
+- **D-06-04**: Keywords/languages stored in Settings with env-override support. **Alt**: hardcode per connector. **Rationale**: SPEC 00 says config via env; Settings.scrape_keywords/scrape_languages added with main.py defaults.
+- **D-06-05**: Smoke tests use mocked `requests.get`. **Alt**: real network calls. **Rationale**: CI reliability; real-network smoke is a manual script concern.
+
 ### claude-05 — AI Classifier + Quality Gate + Pipeline (2026-05-01)
 
 - **D-05-01**: Seniority accuracy 67.9% on ground truth (29 offers, llama-3.1-8b-instant). **Alt**: accept or re-test. **Rationale**: does NOT block merge per task spec; flag for prompt tuning in claude-06+. Role family 89.3%, skills P/R ~74% both acceptable. Likely root cause: small fixtures set (29); model conflates junior/mid for ambiguous postings.
@@ -205,6 +216,41 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 - **D-01-26**: Dedupe hit does NOT re-run AI by default. **Alt**: re-run on hit. **Rationale**: AI is dominant cost; CLI `--reclassify` for override.
 - **D-01-27**: Index creation fail-loud at boot. **Alt**: lazy/swallowed. **Rationale**: P1-01 must not recur.
 
+## Connector Interface (claude-06)
+
+### fetch() Contract
+- `BaseConnector.fetch() -> Iterator[dict]` — yields raw job dicts
+- Each dict has: `title`, `company`, `link`, `description`, `source`, `original_language`, `published_at`, `location_raw` (fields vary by source)
+- Global connectors (Arbeitnow, RemoteOK, Jobicy): one HTTP call, yield all
+- Keyword-aware connectors (Adzuna, LinkedIn, Jooble, JobisJob): iterate over `settings.scrape_keywords × settings.scrape_languages`
+- IT-only connectors (IProgrammatori, ReteInformaticaLavoro): fixed `lang="it"`
+
+### Registry
+- `connectors.REGISTRY` — `dict[str, ConnectorEntry]`
+- `get_enabled_connectors()` — returns instantiated enabled connectors
+- Runtime disable: set `DISABLED_CONNECTORS=linkedin,jooble` env var
+- TechMap: disabled (API spec incomplete)
+- JobsCollider: disabled (category feed 404)
+
+### Per-Connector Status (2026-05-01)
+
+| Connector | Type | Enabled | Notes |
+|---|---|---|---|
+| LinkedIn | html | yes | Brittle (476 LOC), high breakage risk |
+| Adzuna | api | yes | Needs ADZUNA_APP_ID + ADZUNA_APP_KEY |
+| Jooble | api | yes | SSL verify=False (P1-05), needs JOOBLE_API_KEY |
+| JobisJob | html | yes | Description placeholder only |
+| IProgrammatori | rss | yes | IT-only, good quality |
+| Arbeitnow | api | yes | sleep(5) unconditional |
+| RemoteOK | api | yes | No auth, global remote |
+| Jobicy | api | yes | sleep(1) unconditional, low yield |
+| ReteInformaticaLavoro | html | yes | IT-only, 330 LOC regex |
+| RSS | rss | yes | EN feeds only |
+| TechMap | api | **no** | API spec not verified |
+| JobsCollider | rss | **no** | Category feed 404 |
+
+Full issue list: `docs/reports/02-connectors-status.md`
+
 ## Pending Work
 
 ### Immediate (post-claude-05)
@@ -216,7 +262,10 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 - **claude-05 note**: Ground truth fixture corrections: de_002, en_004, fr_001 expected_status changed from `valid` → `premium` (SPEC 03 premium criteria clearly met per expected AI outputs).
 - **claude-05 note**: Ground truth run: 1 AI failure (Security Engineer, en_008_security_engineer_borderline) — model returned list-wrapped JSON. Fixed post-baseline: `_single_call` now unwraps `[{...}]` to `{...}`.
 - **claude-05 note**: `dedupe.merge_with_existing` fixed: naive/aware datetime comparison guard added.
-- **claude-06 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
+- **claude-06 — DONE**: `connectors/` package with BaseConnector ABC + 12 adapters + registry. 223 tests green.
+- **claude-06 note**: scrapers/ unchanged; connectors/ is an adapter layer. fetch() wraps async scrape() via asyncio.run().
+- **claude-06 note**: TechMap + JobsCollider remain disabled. Issues tracked in docs/reports/02-connectors-status.md.
+- **claude-07 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
 - **claude-07 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
 
 ### Cross-repo (out of this repo)
