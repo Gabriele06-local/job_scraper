@@ -1,7 +1,7 @@
 import pytest
 import datetime
 from datetime import date
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 import sys
 import os
 
