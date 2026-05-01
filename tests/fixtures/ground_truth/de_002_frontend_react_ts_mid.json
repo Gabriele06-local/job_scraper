@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Frontend Entwickler React TypeScript",
+    "company_name": "Digital Agency Berlin GmbH",
+    "location_raw": "Berlin (Hybrid)",
+    "description": "Digital Agency Berlin GmbH sucht einen Frontend Entwickler mit Erfahrung in React und TypeScript für unser wachsendes Produktteam in Berlin. Sie entwickeln moderne, performante Benutzeroberflächen mit React 18 und TypeScript, verwalten den Anwendungsstatus mit Redux, gestalten responsive Layouts mit SCSS, schreiben Unit- und Integrationstests mit der Testing Library und konsumieren REST APIs. Teamarbeit in agilen Scrum-Sprints ist selbstverständlich. Anforderungen: mindestens 3 Jahre Erfahrung mit React und TypeScript, Kenntnisse in Redux, SCSS und Testing Library sowie Erfahrung mit Git. Hybrides Arbeitsmodell mit 2 Tagen Büropräsenz in Berlin pro Woche. Jahresgehalt zwischen 55.000 und 70.000 EUR.",
+    "detected_language": "de",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/de/61002",
+    "posted_at": "2026-04-21T09:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["React", "TypeScript", "Redux", "SCSS", "Testing Library", "REST API", "Git", "Scrum"],
+      "category": "frontend",
+      "seniority": "mid",
+      "role_family": "frontend",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": 55000,
+      "salary_max": 70000,
+      "currency": "EUR",
+      "languages_required": ["de"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.86
+    }
+  }
+}

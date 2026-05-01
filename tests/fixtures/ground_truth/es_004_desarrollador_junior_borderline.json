@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Desarrollador Web Junior",
+    "company_name": "Startups SL",
+    "location_raw": "Valencia (Presencial)",
+    "description": "Buscamos un Desarrollador Web Junior para incorporarse a nuestro equipo en Valencia. El candidato trabajará con tecnologías frontend como HTML, CSS y JavaScript, con algo de experiencia en React. No se requiere experiencia previa en el sector, solo ganas de aprender y crecer profesionalmente. Puesto presencial en nuestras oficinas de Valencia. No se ofrece posibilidad de teletrabajo. Contrato indefinido con salario a convenir según perfil del candidato durante la entrevista.",
+    "detected_language": "es",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/es/54324",
+    "posted_at": "2026-04-23T09:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "rejected_quality",
+    "expected_reject_reason": "NO_SALARY_AND_NO_REMOTE_MODE",
+    "ai_output": {
+      "skills": ["HTML", "CSS", "JavaScript", "React"],
+      "category": "frontend",
+      "seniority": "junior",
+      "role_family": "frontend",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["es"],
+      "quality_flags": ["has_requirements"],
+      "confidence": 0.72
+    }
+  }
+}

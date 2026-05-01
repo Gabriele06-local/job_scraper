@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Senior Backend Engineer (Go)",
+    "company_name": "Acme Cloud Ltd",
+    "location_raw": "Remote (EU)",
+    "description": "Acme Cloud Ltd is looking for a Senior Backend Engineer with deep expertise in Go to join our distributed platform team. You will be responsible for designing, building, and maintaining high-throughput, low-latency backend services that power our cloud-native platform used by thousands of enterprise customers across Europe. Key responsibilities: architect and implement microservices in Go with a focus on scalability and reliability, develop gRPC APIs and internal service contracts, manage containerized workloads on Kubernetes (EKS on AWS), work with PostgreSQL and RDS for relational data storage, integrate Kafka for event streaming and async processing, participate in on-call rotations and contribute to SRE practices. Requirements: 6+ years of professional software engineering experience, at least 4 years working with Go in production, hands-on experience with Kubernetes and Docker, strong knowledge of AWS services (EKS, RDS, S3, CloudWatch), proficiency with PostgreSQL and SQL query optimization, experience with Kafka or similar message brokers. Fully remote position open to EU-based candidates. Competitive salary: EUR 90,000 - 130,000 per year, plus equity, health benefits, and annual learning budget.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234567",
+    "posted_at": "2026-04-20T10:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Go", "gRPC", "Kubernetes", "AWS", "EKS", "RDS", "PostgreSQL", "Kafka", "Docker", "microservices"],
+      "category": "software_engineering",
+      "seniority": "senior",
+      "role_family": "backend",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 90000,
+      "salary_max": 130000,
+      "currency": "EUR",
+      "languages_required": ["en"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack", "has_benefits"],
+      "confidence": 0.94
+    }
+  }
+}

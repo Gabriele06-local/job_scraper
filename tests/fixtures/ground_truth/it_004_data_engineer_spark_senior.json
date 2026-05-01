@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Senior Data Engineer",
+    "company_name": "DataFlow Italia Srl",
+    "location_raw": "Italia (Remoto)",
+    "description": "DataFlow Italia Srl, azienda specializzata in soluzioni di data engineering e analytics per clienti enterprise, cerca un Senior Data Engineer da inserire nel team dati in modalità completamente remota. Il candidato avrà un ruolo chiave nella progettazione e sviluppo di pipeline di dati scalabili e affidabili. Responsabilità: progettazione di pipeline batch e streaming con Apache Spark e Kafka, sviluppo di modelli dbt per la trasformazione dei dati su BigQuery, orchestrazione dei workflow con Apache Airflow, sviluppo di script Python per l'automazione e l'integrazione dei dati, ottimizzazione delle query SQL su dataset di grandi dimensioni, collaborazione con team di data science e analytics. Requisiti: 5+ anni di esperienza in data engineering, Apache Spark, Kafka, dbt (data build tool), BigQuery o analogo data warehouse cloud, Python avanzato, Airflow, SQL ottimizzato, esperienza con GCP. Offriamo: lavoro completamente remoto da tutta Italia, RAL 75.000 - 100.000 EUR, bonus annuale, budget formazione e certificazioni, hardware scelto dal candidato.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123459",
+    "posted_at": "2026-04-20T13:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Apache Spark", "Kafka", "dbt", "BigQuery", "Python", "Airflow", "SQL", "GCP"],
+      "category": "data_engineering",
+      "seniority": "senior",
+      "role_family": "data",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 75000,
+      "salary_max": 100000,
+      "currency": "EUR",
+      "languages_required": ["it"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack", "has_benefits"],
+      "confidence": 0.93
+    }
+  }
+}
