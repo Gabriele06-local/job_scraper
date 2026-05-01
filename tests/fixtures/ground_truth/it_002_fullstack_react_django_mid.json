@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Fullstack Developer React + Django",
+    "company_name": "WebSolution SpA",
+    "location_raw": "Milano, Italia (Ibrido)",
+    "description": "WebSolution SpA ricerca un Fullstack Developer con esperienza su React e Django per ampliare il team di sviluppo prodotto. Il candidato si occuperà di sviluppare e mantenere applicazioni web moderne con frontend in React e backend in Django, collaborando strettamente con il team di design e i product manager. Requisiti richiesti: almeno 3 anni di esperienza nello sviluppo fullstack, ottima conoscenza di React (hooks, context, Redux), Python e Django REST Framework, PostgreSQL per la gestione dei dati, JavaScript ES6+, familiarità con Git e workflow GitFlow. Completano il profilo: buone capacità comunicative, attitudine al problem solving, esperienza con metodologie Agile. Offriamo modalità di lavoro ibrida (3 giorni in sede a Milano, 2 da remoto), contratto a tempo indeterminato, ambiente giovane e dinamico.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123457",
+    "posted_at": "2026-04-20T11:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["React", "Django", "Python", "PostgreSQL", "JavaScript", "Git", "REST API"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "fullstack",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["it"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.82
+    }
+  }
+}

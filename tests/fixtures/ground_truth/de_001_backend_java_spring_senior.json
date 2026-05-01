@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Senior Java Backend Entwickler (Spring Boot)",
+    "company_name": "SoftwareHaus GmbH",
+    "location_raw": "Deutschland (vollständig remote)",
+    "description": "SoftwareHaus GmbH sucht einen erfahrenen Senior Java Backend Entwickler mit fundiertem Wissen in Spring Boot für unser remote-first Entwicklungsteam. Sie entwerfen und implementieren skalierbare Microservices mit Java 17 und Spring Boot, integrieren asynchrone Kommunikation über Apache Kafka, verwalten relationale Daten mit PostgreSQL und containerisieren Dienste mit Docker und Kubernetes auf AWS. Erfahrung mit REST- und GraphQL-APIs ist unbedingt erforderlich. Voraussetzungen: mindestens 6 Jahre Berufserfahrung in der Java-Backend-Entwicklung, sehr gute Kenntnisse in Spring Boot, PostgreSQL, Kafka, Docker, Kubernetes und AWS. Die Position ist vollständig remote aus Deutschland. Gehalt zwischen 90.000 und 120.000 EUR jährlich, 30 Tage Urlaub und betriebliche Altersvorsorge.",
+    "detected_language": "de",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/de/61001",
+    "posted_at": "2026-04-20T08:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Java", "Spring Boot", "PostgreSQL", "Kafka", "Docker", "Kubernetes", "AWS", "GraphQL", "REST API"],
+      "category": "backend",
+      "seniority": "senior",
+      "role_family": "backend",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 90000,
+      "salary_max": 120000,
+      "currency": "EUR",
+      "languages_required": ["de"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack", "has_benefits"],
+      "confidence": 0.92
+    }
+  }
+}

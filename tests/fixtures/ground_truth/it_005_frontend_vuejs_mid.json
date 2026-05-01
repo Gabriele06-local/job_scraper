@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Frontend Developer Vue.js",
+    "company_name": "Agenzia Digital Srls",
+    "location_raw": "Torino, Italia (In sede)",
+    "description": "Agenzia Digital Srls, agenzia creativa con sede a Torino, seleziona un Frontend Developer specializzato in Vue.js per potenziare il proprio team di sviluppo web. Il candidato lavorerà a stretto contatto con designer e backend developer per realizzare interfacce utente moderne, performanti e accessibili per clienti nei settori retail, fashion e hospitality. Requisiti tecnici: Vue.js 3 (Composition API, Vuex/Pinia, Vue Router), TypeScript, JavaScript ES6+, SCSS e CSS moderno, integrazione con REST API, utilizzo di Figma per la lettura dei design, Git per il versionamento del codice. Sono considerati plus: esperienza con Nuxt.js, conoscenza di tecniche di ottimizzazione delle performance web, familiarità con strumenti di testing frontend. Esperienza richiesta: 2-4 anni nello sviluppo frontend, preferibilmente con Vue.js. Sede di lavoro: Torino (in presenza). Contratto a tempo indeterminato, RAL 35.000 - 45.000 EUR, ticket restaurant, orario flessibile.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123460",
+    "posted_at": "2026-04-21T09:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Vue.js", "TypeScript", "JavaScript", "SCSS", "Figma", "REST API", "Git"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "frontend",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": 35000,
+      "salary_max": 45000,
+      "currency": "EUR",
+      "languages_required": ["it"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.84
+    }
+  }
+}

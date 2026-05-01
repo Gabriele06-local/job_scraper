@@ -1,0 +1,18 @@
+{
+  "input": {
+    "title": "Addetto Supporto Clienti",
+    "company_name": "Servizi Italia Srl",
+    "location_raw": "Milano, Italia (In sede)",
+    "description": "Cerchiamo addetto al supporto clienti. Buone doti comunicative richieste. Inviare CV.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123465",
+    "posted_at": "2026-04-21T14:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": false,
+    "expected_status": "rejected_prefilter",
+    "expected_reject_reason": "DESCRIPTION_TOO_SHORT",
+    "ai_output": null
+  }
+}

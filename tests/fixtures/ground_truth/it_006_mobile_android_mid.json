@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Mobile Developer Android Kotlin",
+    "company_name": "App Factory Srl",
+    "location_raw": "Bologna, Italia (Ibrido)",
+    "description": "App Factory Srl, software house specializzata nello sviluppo di applicazioni mobile per il mercato italiano ed europeo, cerca un Mobile Developer Android con esperienza in Kotlin per il proprio team. Il candidato si occuperà dello sviluppo e della manutenzione di applicazioni Android native per clienti nei settori e-commerce, banking e utility. Competenze richieste: Kotlin come linguaggio principale, Android SDK e ciclo di vita delle activity/fragment, Jetpack Compose per la costruzione di UI moderne e dichiarative, Retrofit per la gestione delle chiamate REST API, Room Database per la persistenza locale, conoscenza di Git e pratiche di code review. Saranno considerati plus: esperienza con Coroutines e Flow, conoscenza di Dagger/Hilt per la dependency injection, familiarità con Firebase. Esperienza richiesta: almeno 2 anni nello sviluppo Android nativo, con almeno una app pubblicata sul Play Store. Modalità di lavoro: ibrida (2 giorni in sede a Bologna, 3 da remoto). Contratto a tempo indeterminato, ambiente tecnologico stimolante.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123461",
+    "posted_at": "2026-04-21T10:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Kotlin", "Android SDK", "Jetpack Compose", "Retrofit", "Room", "Git", "REST API"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "mobile",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["it"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.83
+    }
+  }
+}

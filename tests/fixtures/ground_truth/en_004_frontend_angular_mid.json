@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Frontend Developer Angular",
+    "company_name": "FinTech Solutions Ltd",
+    "location_raw": "London, UK (Hybrid)",
+    "description": "FinTech Solutions Ltd, a leading provider of financial technology platforms in the UK and Europe, is seeking a Frontend Developer with strong Angular expertise to join our growing engineering team in London. The role follows a hybrid model with 3 days per week in our central London office. You will work closely with UX designers and backend engineers to deliver high-quality, performant web applications for our clients in banking and insurance. Key responsibilities: develop and maintain complex single-page applications using Angular 16+, implement reactive patterns with RxJS and manage application state effectively, write clean, typed code with TypeScript, style components using SCSS following the established design system, integrate with RESTful APIs and handle asynchronous data flows, participate in Agile ceremonies (sprint planning, daily standups, retrospectives), collaborate via Git with pull request reviews and branching strategies. Requirements: 3-5 years of professional frontend development experience, strong proficiency in Angular (v12 or later required, v16 preferred), TypeScript and RxJS in a production codebase, SCSS and responsive web design, REST API integration experience, familiarity with Agile/Scrum methodology, Git version control. Hybrid role based in London. Salary: GBP 55,000 - 70,000 per year, plus annual bonus and private health insurance.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234570",
+    "posted_at": "2026-04-20T13:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Angular", "TypeScript", "RxJS", "SCSS", "REST API", "Agile", "Git"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "frontend",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": 55000,
+      "salary_max": 70000,
+      "currency": "GBP",
+      "languages_required": ["en"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.85
+    }
+  }
+}

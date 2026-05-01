@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Senior Python Backend Engineer",
+    "company_name": "Nexo Cloud Srl",
+    "location_raw": "Milano, Italia (Remote)",
+    "description": "Nexo Cloud Srl, azienda leader nello sviluppo di soluzioni cloud enterprise, cerca un Senior Python Backend Engineer da inserire nel proprio team di sviluppo distribuito. Il candidato ideale ha almeno 5 anni di esperienza nello sviluppo di microservizi con Python e FastAPI, e una solida conoscenza dei sistemi distribuiti. Responsabilità principali: progettazione e sviluppo di API RESTful ad alta scalabilità con FastAPI, gestione di database PostgreSQL con query ottimizzate e migrazioni Alembic, implementazione di sistemi di caching con Redis, deploy e orchestrazione dei servizi su AWS con Docker e Kubernetes. Requisiti: Python 5+ anni, FastAPI, PostgreSQL, Redis, AWS (EC2, S3, RDS), Docker, Kubernetes. Esperienza con architetture a microservizi e sistemi event-driven. Capacità di lavorare in team Agile con metodologia Scrum. Offriamo: lavoro completamente remoto, RAL 80.000 - 110.000 EUR, stock options, welfare aziendale, budget formazione annuale.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123456",
+    "posted_at": "2026-04-20T10:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Python", "FastAPI", "PostgreSQL", "Redis", "AWS", "Docker", "Kubernetes", "microservices", "REST API"],
+      "category": "software_engineering",
+      "seniority": "senior",
+      "role_family": "backend",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 80000,
+      "salary_max": 110000,
+      "currency": "EUR",
+      "languages_required": ["it"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack"],
+      "confidence": 0.91
+    }
+  }
+}
