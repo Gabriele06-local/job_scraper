@@ -1,17 +1,20 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01T12:00Z
+2026-05-01T16:00Z
 
 ## Project Status
-claude-06 complete. Connectors refactored under `BaseConnector` interface (`connectors/` package). 10 enabled, 2 disabled (TechMap, JobsCollider). 223 tests green. **Seniority accuracy 67.9% < 80% threshold — prompt tuning still needed.** Next: claude-07 expiration job.
+claude-08 complete. Migration runbook + dry-run-validated wipe-and-reimport script shipped. 263 tests green. Migration script ready at `scripts/migrate.py`. Execute manually with `--confirm` AFTER:
+- Backup verified (`mongodump`)
+- Bun API in read-only mode
+- User has reviewed dry-run output (`docs/reports/03-migration-dryrun.md`)
 
 ## Architecture Snapshot
 - Framework: requests + BeautifulSoup4 + feedparser + aiohttp (mixed sync/async)
 - Orchestrator: `main.py` — single class `JobScraperOrchestrator` (546 LOC)
 - AI: OpenAI GPT-4o-mini via `AsyncOpenAI` (model from `OPENAI_MODEL` env)
 - DB: MongoDB local, db=`itjobhub` (NOT `devboards` as CLAUDE.md states)
-- Scheduling: cron suggested in README only — no Dockerfile, no docker-compose, no systemd unit, no supervisor
+- Scheduling: `Dockerfile` + `docker-compose.yml` added (importer/expirer as sleep-loop services). Cron alternative in `docs/runbooks/cron.example`.
 - Deploy: manual `python3 main.py` invocation, venv-based
 - Logging: stdlib `logging` to `job_scraper.log` (4.3 MB current). NOT structlog.
 
@@ -216,6 +219,21 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 - **D-01-26**: Dedupe hit does NOT re-run AI by default. **Alt**: re-run on hit. **Rationale**: AI is dominant cost; CLI `--reclassify` for override.
 - **D-01-27**: Index creation fail-loud at boot. **Alt**: lazy/swallowed. **Rationale**: P1-01 must not recur.
 
+### claude-07 — Expiration Checker + CLI Scheduler (2026-05-01)
+
+- **D-07-01**: `import_service/` namespace package for CLI instead of top-level `cli.py`. **Alt**: root-level cli.py. **Rationale**: task spec requires `python -m import_service.cli`; namespace package avoids touching legacy `main.py`.
+- **D-07-02**: docker-compose uses sleep-loop (no cron daemon in container). **Alt**: `supercronic` or system cron. **Rationale**: minimal image; intervals configurable via env vars without rebuilding. `docs/runbooks/cron.example` covers the host-cron alternative.
+- **D-07-03**: max_age jobs force-expired without probe (posted_at < cutoff AND never probed). **Alt**: probe them too. **Rationale**: SPEC 04 §3.4; 60+ day old never-probed listings are certainly dead; avoids wasted HTTP calls.
+- **D-07-04**: `_DomainLimiter` asyncio.Lock for per-host rate limit. **Alt**: httpx `Limits(max_connections_per_host)`. **Rationale**: `httpx.Limits` has no per-host param in current version; Lock + timestamp enforces 1 req/s per host correctly.
+
+### claude-08 — Migration Runbook + Wipe-and-Reimport Script (2026-05-01)
+
+- **D-08-01**: `--confirm` is the destructive gate; absence (or `--dry-run`) keeps the script side-effect-free. **Alt**: `--yes-i-really-mean-it`-style boolean / two-step prompt. **Rationale**: explicit flag survives non-interactive shells (cron, CI) while making accidental destruction impossible without the explicit token.
+- **D-08-02**: Backup is operator-driven (manual `mongodump` per runbook), NOT performed by `migrate.py`. **Alt**: script invokes `mongodump`. **Rationale**: backup destination, retention, and credentials vary per environment; embedding fragile shell-out couples the script to operator infra.
+- **D-08-03**: Bun read-only flip is documented as a manual operator step. **Alt**: script triggers it via API. **Rationale**: cross-repo coupling; Bun deployment + auth model is out of scope for this repo.
+- **D-08-04**: Idempotent drop — skip when collection already empty; rely on dedup_hash upsert in pipeline persistence to make the re-import safely re-runnable. **Alt**: refuse to re-run after partial failure. **Rationale**: SPEC 04 dedupe contract already guarantees idempotency; an opinionated guard would block legitimate resumes.
+- **D-08-05**: Cost estimate uses baseline-derived avg `$0.0000533` per Groq call × pre-filter survivors. **Alt**: per-offer token estimate from description length. **Rationale**: baseline is empirical and stable; per-offer tokenization adds complexity for an upper-bound estimate.
+
 ## Connector Interface (claude-06)
 
 ### fetch() Contract
@@ -265,8 +283,11 @@ Full issue list: `docs/reports/02-connectors-status.md`
 - **claude-06 — DONE**: `connectors/` package with BaseConnector ABC + 12 adapters + registry. 223 tests green.
 - **claude-06 note**: scrapers/ unchanged; connectors/ is an adapter layer. fetch() wraps async scrape() via asyncio.run().
 - **claude-06 note**: TechMap + JobsCollider remain disabled. Issues tracked in docs/reports/02-connectors-status.md.
-- **claude-07 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
-- **claude-07 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
+- **claude-07 — DONE**: `pipeline/expiration.py` (async HEAD/GET prober, semaphore 10, per-domain rate limit 1 req/s, multilingual body patterns). `import_service/cli.py` with 4 commands: `import`, `expire`, `reindex`, `stats`. `Dockerfile` + `docker-compose.yml` (importer/expirer services). `docs/runbooks/cron.example`. 263 tests green.
+- **claude-07 note**: `httpx.Limits` has no `max_connections_per_host`; per-host throttling via `_DomainLimiter` asyncio.Lock.
+- **claude-08 — DONE**: `docs/runbooks/migration.md` (7 steps + rollback). `scripts/migrate.py` (--dry-run default, --confirm required for destructive run, idempotent, per-source counts + reject reasons + Groq cost estimate). Dry-run validated: 3,177 raw → 1,466 AI candidates → est cost $0.08 (`docs/reports/03-migration-dryrun.md`).
+- **claude-08 note**: dry-run shows LinkedIn / RSS / Jooble / ReteInformaticaLavoro / JobisJob / Jobicy yield 0 imports (mostly DESCRIPTION_TOO_SHORT or MISSING_REQUIRED_FIELDS). Adzuna (735), IProgrammatori (536), Arbeitnow (100), RemoteOK (95) carry the migration. Validate per-source yield post-migration.
+- **claude-08 note**: real run BLOCKED on operator preconditions (mongodump, Bun read-only flip, dry-run review). See Project Status above.
 
 ### Cross-repo (out of this repo)
 - **Bun API**: alias `link`↔`url`, `published_at`↔`posted_at`; accept `seniority` enum values `lead`, `principal`. Status: pending PR.
