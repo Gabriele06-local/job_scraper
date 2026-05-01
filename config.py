@@ -58,5 +58,14 @@ class Settings(BaseSettings):
     # Connectors disabled at runtime (comma-separated connector names)
     disabled_connectors: list[str] = []
 
+    # Expiration checker
+    expiration_concurrency: int = 10
+    expiration_limit: int = 500
+    expiration_max_age_days: int = 60
+    expiration_user_agent: str = "DevBoardsLinkProbe/1.0 (+https://devboards.io/probe)"
+
+    # Health check
+    health_check_file: str = "/tmp/health.json"
+
 
 settings = Settings()
