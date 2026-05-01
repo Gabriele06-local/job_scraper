@@ -1,110 +1,144 @@
-# Job Scraper
+# DevBoards Import Service
 
-Fetch jobs from multiple APIs, scrapers, and RSS feeds, perform AI-based categorization (skills, seniority, location), and save them to MongoDB.
+Python service that imports job offers from external portals (RSS, APIs, HTML)
+into MongoDB. Consumed by the Bun + Elysia API and Qwik frontend.
 
-## Features
-- **Configurable Date Window**: Standardizes imports to a strict window (default: today and yesterday) to ensure freshness.
-- **AI Categorization**: Uses OpenAI to extract structured data (skills, seniority, formatted address) from job descriptions.
-- **Geocoding**: Converts company addresses to GPS coordinates using Google Maps API.
-- **Deduplication**: Ensures the same job link isn't imported twice.
-- **Multi-source**: Fetches from **LinkedIn** (via Apify, executed first), RemoteOK, Arbeitnow, Adzuna, JobisJob, Jooble, and specific technology RSS feeds (WeWorkRemotely, Himalayas).
+## Pipeline
 
-## Setup
+```
+Connectors → Normalize → Pre-filter → AI Classify (Groq) → Quality Gate → Persist
+                                                         Expiration (separate job)
+```
 
-1. **Environment**: Create a `.env` file based on `.env.example` and fill in your API keys (OpenAI, Google Maps, Adzuna, Jooble, **Apify**) and MongoDB URI.
+## Prerequisites
 
-2. **Installation**:
+- Python 3.11+
+- MongoDB 6+ (`itjobhub` database)
+- Groq API key
+- Adzuna + Jooble keys (optional — connectors auto-disable if missing)
+- Node/Bun (test runner only)
+
+## Local Setup
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+cp .env.example .env
+# Edit .env — minimum required: GROQ_API_KEY, DATABASE_URL, MONGO_DB
 ```
 
-## Usage
+## Environment Variables
 
-Run the scraper using `main.py`. You can specify languages, a limit of jobs per language, and the history window.
+All config via `.env` (Pydantic Settings — see `.env.example` for full list).
 
-### Basic command
+### Required
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GROQ_API_KEY` | — | AI classification (mandatory) |
+| `DATABASE_URL` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGO_DB` | `itjobhub` | Database name |
+
+### Connector Auth (optional per connector)
+
+| Variable | Connector |
+|---|---|
+| `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` | Adzuna API |
+| `JOOBLE_API_KEY` | Jooble API |
+
+### Tuning
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model |
+| `GROQ_RPM` | `30` | Client-side rate limit |
+| `DISABLED_CONNECTORS` | `` | Comma-separated connectors to skip |
+| `SCRAPE_LANGUAGES` | `it,en,es,fr,de` | Languages to fetch |
+| `LOG_LEVEL` | `INFO` | structlog level |
+| `EXPIRATION_CONCURRENCY` | `10` | Parallel HEAD probes |
+| `EXPIRATION_MAX_AGE_DAYS` | `60` | Force-expire threshold |
+| `IMPORT_INTERVAL_SECONDS` | `14400` | Docker importer sleep loop |
+| `EXPIRE_INTERVAL_SECONDS` | `86400` | Docker expirer sleep loop |
+
+## CLI Usage
+
 ```bash
-python3 main.py
+source venv/bin/activate
+
+# Full import pipeline
+python -m import_service.cli import
+
+# Dry run (no DB writes)
+python -m import_service.cli import --dry-run
+
+# Limit jobs for testing
+python -m import_service.cli import --limit 50
+
+# Expire dead job links
+python -m import_service.cli expire
+
+# Rebuild MongoDB indexes (idempotent)
+python -m import_service.cli reindex
+
+# Print collection metrics as JSON
+python -m import_service.cli stats
 ```
 
-### Advanced options
+## Run Tests
+
 ```bash
-# Import Italian and English jobs from the last 2 days, limit 10 per language
-python3 main.py --languages it,en --limit 10 --days 1
+npm test          # pytest via Bun
+ruff check .      # lint
 ```
 
-**Available Arguments:**
-- `--languages`: Comma-separated list of ISO language codes (e.g., `it,en,es`). Defaults to `en,it,es,fr,de`.
-- `--limit`: The maximum number of *new* jobs to import for each language.
-- `--days`: Lookback window in days (0=today, 1=today/yesterday). Defaults to 1.
-
-## Automation
-
-Set up a CronJob to run the scraper hourly:
+## Docker Deploy
 
 ```bash
-0 * * * * /path/to/venv/bin/python3 /full/path/to/main.py --limit 50 --days 1 >> /full/path/to/job_scraper_cron.log 2>&1
+# Create external network (once)
+docker network create devboards
+
+# Start continuous importer + expirer
+docker compose up -d importer expirer
+
+# One-shot operations
+docker compose run --rm reindex
+docker compose run --rm stats
 ```
 
-## Developer Tools
+Intervals are controlled by `IMPORT_INTERVAL_SECONDS` and `EXPIRE_INTERVAL_SECONDS`.
 
-### Linting
-To maintain code quality in Python, we recommend using **flake8** or **black**.
-```bash
-# Run lint check
-flake8 .
-```
+## Cron Alternative
 
-### Manual Verification
-To verify the scraper logic without performing a full run:
-1. Ensure your `.env` is correctly configured.
-2. Run the main script with a low limit:
-   ```bash
-   python3 main.py --languages it --limit 1 --days 1
-   ```
+See `docs/runbooks/cron.example` for host cron setup.
 
-### Data Integrity Fixes
-If you encounter date format issues with Prisma, use the provided utility script:
-```bash
-python3 fix_dates.py
-```
+## First-Run Migration
+
+Before the first production run, wipe legacy data and rebuild indexes.
+Follow `docs/runbooks/migration.md` step-by-step.
+
+## Connectors
+
+12 active connectors. 2 disabled (TechMap — API spec unverified, JobsCollider — feed 404).
+
+Disable at runtime: `DISABLED_CONNECTORS=linkedin,jooble`
+
+See `docs/reports/02-connectors-status.md` for per-connector status and known issues.
 
 ## Logs
-Detailed logs are available in `job_scraper.log` for the application logic and `job_scraper_cron.log` for execution status.
 
-## Workflow
-```text
-                  ┌───────────────┐
-                  │  job_scraper  │
-                  │   script      │
-                  └──────┬────────┘
-                         │
-         ┌───────────────┴────────────────────┐
-         │                                    │        
-         ▼                                    ▼
-  ┌───────────────┐                    ┌────────────────┐
-  │  Fetch APIs   │                    │   Fetch RSS    │
-  │(LinkedIn►,    │                    │(WeWorkRemotely,│
-  │Adzuna, Jooble)│                    │ Himalayas)     │
-  └───────┬───────┘                    └──────────────-─┘
-          │
-          ▼
-  ┌───────────────┐
-  │ Process Jobs  │
-  │ - Date Filter │ <--- Strict history window
-  │ - Deduplicate │
-  │ - AI Enrich   │ (Skills, Seniority, Location)
-  │ - Geocode     │
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │  Upsert into  │
-  │   MongoDB     │
-  │ - jobs        │
-  │ - companies   │
-  │ - seniorities │
-  └───────────────┘
-```
+- Structlog JSON to stdout. Redirect to file: `... >> /var/log/devboards/import.log 2>&1`
+- Health check JSON: `/tmp/health.json` (path: `HEALTH_CHECK_FILE` env var)
+
+## Docs
+
+| Path | Contents |
+|---|---|
+| `docs/runbooks/migration.md` | Wipe & re-import procedure |
+| `docs/runbooks/troubleshooting.md` | Common errors + fixes |
+| `docs/runbooks/operations.md` | Monitoring, log locations |
+| `docs/runbooks/cost-monitoring.md` | Groq cost tracking |
+| `docs/runbooks/cron.example` | Host cron schedules |
+| `docs/specs/` | Architecture + schema SPECs |
+| `docs/reports/` | Discovery + baseline + dry-run |
