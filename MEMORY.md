@@ -1,10 +1,10 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01T10:35Z
+2026-05-01T10:45Z
 
 ## Project Status
-Base infra complete (claude-03). Models, Mongo singleton, Groq classifier, structlog, pydantic-settings, ruff.toml all merged to feature/upgrade. 85 tests green. Next: claude-04 pipeline modules (normalize, prefilter, quality_gate).
+claude-04 complete. Pre-filter + dedupe stages implemented and merged to feature/upgrade. 131 tests green. Next: claude-05 quality_gate + AI wiring (skills lexicon, replace OpenAI with Groq classifier).
 
 ## Architecture Snapshot
 - Framework: requests + BeautifulSoup4 + feedparser + aiohttp (mixed sync/async)
@@ -199,9 +199,11 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 
 ## Pending Work
 
-### Immediate (post-claude-03)
-- **claude-04 — Pipeline modules**: `pipeline/normalize.py`, `prefilter.py`, `quality_gate.py`, `dedupe.py` per SPECs 02/03/04.
-- **claude-05 — Skills lexicon + AI wiring**: Skills lexicon (technical vs soft split). Wire `ai/classifier.py` into pipeline. Replace OpenAI categorizer in main.py.
+### Immediate (post-claude-04)
+- **claude-04 — DONE**: `pipeline/language_detector.py`, `pipeline/prefilter.py`, `pipeline/dedupe.py`. 131 tests green.
+- **claude-04 note**: `compute_dedup_hash` in models/job.py was fixed to lowercase source (SPEC 04 compliance).
+- **claude-04 note**: `pipeline/language_detector.py` uses `from_all_languages()` (not subset) — detects unsupported langs as OTHER.
+- **claude-05 — Skills lexicon + AI wiring**: Skills lexicon (technical vs soft split). Wire `ai/classifier.py` into pipeline. Replace OpenAI categorizer in main.py. Also: `pipeline/quality_gate.py` per SPEC 03.
 - **claude-06 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
 - **claude-07 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
 
