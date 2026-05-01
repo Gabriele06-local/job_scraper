@@ -4,7 +4,7 @@
 2026-05-01
 
 ## Project Status
-Discovery phase complete. 12 connectors, 2086 jobs in DB, 39.6% pass strict quality gate, no `link` unique index, scraper idle since Feb 2026.
+Architecture phase complete (claude-01). 5 SPECs drafted: target pipeline, Mongo schema, AI classification, quality gate, dedupe & expiration. Discovery still applies. Next: claude-02 test scaffolding before refactor.
 
 ## Architecture Snapshot
 - Framework: requests + BeautifulSoup4 + feedparser + aiohttp (mixed sync/async)
@@ -149,7 +149,72 @@ Strict gate = desc≥200 AND skills≥1 AND has published_at AND has company.nam
 10. Q-10: **Strict gate threshold**: 826/2086 = 39.6% pass. Acceptable, or raise threshold?
 
 ## Decision Log
-(empty)
+
+### claude-01 — Architecture Decisions (2026-05-01)
+Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
+
+#### Architecture (SPEC 00)
+- **D-01-01**: Pipeline = Fetch → Normalize → Pre-filter → AI Classify (Groq) → Quality Gate → Persist; Expiration as separate job. **Alt**: keep monolithic main.py loop. **Rationale**: per-stage observability; pre-filter cuts AI cost; expiration cadence ≠ fetch cadence.
+- **D-01-02**: New `pipeline/` package (normalize, prefilter, quality_gate, dedupe, expiration). **Alt**: place in `utils/` or `main.py`. **Rationale**: clear stage boundary; matches diagram 1:1; existing dirs (ai/, scrapers/, utils/, database/) have no semantic home for stage logic.
+- **D-01-03**: `httpx` (sync+async) replaces `requests`+`aiohttp`. **Alt**: keep both. **Rationale**: one library, modern, integrates with `tenacity`.
+- **D-01-04**: `pydantic-settings` for config. **Alt**: `os.getenv` ad-hoc. **Rationale**: SPEC mandate; typed, validated.
+- **D-01-05**: `structlog` JSON logging with correlation IDs. **Alt**: stdlib logging. **Rationale**: SPEC mandate; contextvars binding.
+- **D-01-06**: `tenacity` for retries. **Alt**: hand-rolled per scraper. **Rationale**: removes per-scraper inconsistency (P2-05).
+
+#### Mongo Schema (SPEC 01)
+- **D-01-07**: DB name = `itjobhub` (canonical). **Alt**: rename to `devboards`. **Rationale**: shared with Bun + News; rename = cross-repo coordination, low value. Update CLAUDE.md + .mcp.json instead.
+- **D-01-08**: Rename `link` → `url`, `published_at` → `posted_at`. **Alt**: keep names. **Rationale**: standard nomenclature. 1-release transition: write both old+new names.
+- **D-01-09**: `dedup_hash = sha1(title_normalized | company.name_normalized | source)`. **Alt**: cross-source hash; include posted_at. **Rationale**: cross-source hash collides distinct listings; posted_at exclusion enables re-post detection.
+- **D-01-10**: Keep `seniorities` collection for legacy compat; deprecate post-migration. **Alt**: drop now. **Rationale**: Bun API may resolve `seniority_id`; defer.
+- **D-01-11**: Unique indexes MANDATORY at boot. **Alt**: lazy. **Rationale**: P1-01 root cause; fail-loud.
+- **D-01-12**: Double-write `link`+`url`, `published_at`+`posted_at` for 1 release. **Alt**: hard cutover. **Rationale**: scraper/Bun deploy on different cadences.
+
+#### AI Classification (SPEC 02)
+- **D-01-13**: Single Groq provider, no fallback. **Alt**: dual Groq+OpenAI. **Rationale**: simplicity; pipeline non-realtime; retry handles transient.
+- **D-01-14**: 4000-char description truncation. **Alt**: token-based; full body. **Rationale**: deterministic; first 4000 chars carry classification signal.
+- **D-01-15**: Pydantic validation on top of Groq JSON-mode. **Alt**: trust JSON-mode. **Rationale**: defense in depth (enum literals not enforced by JSON-mode).
+- **D-01-16**: Skills lexicon split done locally (technical_skills vs skills). **Alt**: AI splits. **Rationale**: deterministic; lexicon updates without prompt changes.
+- **D-01-17**: 3-attempt retry with exponential backoff. **Alt**: 5+. **Rationale**: Groq transient rates low; job re-enters next run.
+
+#### Quality Gate (SPEC 03)
+- **D-01-18**: 5-rule valid gate, first-match reject_reason. **Alt**: composite score. **Rationale**: clear root cause; matches SPEC requirement.
+- **D-01-19**: Weighted-sum quality score (0.30 skills, 0.20 sen, 0.20 sal, 0.15 rem, 0.15 conf). **Alt**: equal weights. **Rationale**: skills drive perceived quality; salary deweighted (81.7% missing in current data).
+- **D-01-20**: Persist rejected offers (don't drop). **Alt**: discard. **Rationale**: dedup_hash prevents AI re-run on junk; storage cost negligible.
+- **D-01-21**: Premium requires (`clear_jd` OR `has_requirements`) AND NOT `boilerplate`. **Alt**: skip flags. **Rationale**: AI confidence misclassifies polished-empty boilerplate.
+- **D-01-22**: `remote_mode in (hybrid, remote)` substitutes for missing salary in valid gate. **Alt**: salary required. **Rationale**: 81.7% missing salary today; collapsing yield <20% unacceptable.
+
+#### Dedupe & Expiration (SPEC 04)
+- **D-01-23**: 3 dedupe layers (URL, hash, fuzzy-flag). **Alt**: URL only; fuzzy-merge. **Rationale**: URL misses re-listings; fuzzy-merge risks false-positives; flag-only preserves data.
+- **D-01-24**: Fuzzy threshold 92 / 14-day window. **Alt**: 85 / 30d. **Rationale**: tight threshold for first deploy; tune later.
+- **D-01-25**: Expiration HEAD-only by default, GET-on-allow-list. **Alt**: GET always. **Rationale**: HEAD ~10× cheaper, politer.
+- **D-01-26**: Dedupe hit does NOT re-run AI by default. **Alt**: re-run on hit. **Rationale**: AI is dominant cost; CLI `--reclassify` for override.
+- **D-01-27**: Index creation fail-loud at boot. **Alt**: lazy/swallowed. **Rationale**: P1-01 must not recur.
 
 ## Pending Work
-(empty)
+
+### Immediate (post-claude-01)
+- **claude-02 — Test scaffolding**: pytest fixtures for Mongo, Groq mock, sample raw payloads per scraper. Pre-condition for any refactor.
+- **claude-03 — Config + logging**: Implement `config.py` (pydantic-settings) and `utils/logging.py` (structlog) per SPEC 00 §4, §7.
+- **claude-04 — Repository + indexes**: Refactor `database/mongo_client.py` → `database/repository.py`. Implement fail-loud `ensure_indexes`. Apply schema from SPEC 01.
+- **claude-05 — Pipeline modules**: `pipeline/normalize.py`, `prefilter.py`, `quality_gate.py`, `dedupe.py` per SPECs 02/03/04.
+- **claude-06 — AI classifier (Groq)**: Replace `ai/categorizer.py` (OpenAI) with `ai/classifier.py` (Groq) per SPEC 02. Skills lexicon committed.
+- **claude-07 — Expiration job**: New `pipeline/expiration.py` per SPEC 04 §3. CLI sub-command `python main.py expire`.
+- **claude-08 — Migration**: Backup → drop → re-index → first full run. Scripted in `docs/runbooks/migration-2026-05.md`.
+
+### Cross-repo (out of this repo)
+- **Bun API**: alias `link`↔`url`, `published_at`↔`posted_at`; accept `seniority` enum values `lead`, `principal`. Status: pending PR.
+- **Qwik frontend**: accept `seniority=lead|principal` in `src/contexts/jobs.tsx`. Status: pending PR.
+- **CLAUDE.md fix**: change "DB devboards" → "DB itjobhub" (top-level + apps/job_scraper). Status: documentation drift; do in claude-04 commit.
+- **`.mcp.json` fix**: change connection string DB to `itjobhub`. Status: same.
+
+### Open questions still pending answer (from discovery Q-01..Q-10)
+- Q-04 wipe scope (jobs only? + companies? + seniorities?). Current SPEC 01 §5: jobs+companies wipe, seniorities preserved.
+- Q-05 scheduling target (cron / systemd / Docker). Current SPEC 00: cron snippet in runbook only.
+- Q-06 write path (direct Mongo vs Bun /jobs/import). Current: direct Mongo retained.
+- Q-08 TechMap / JobsCollider: still disabled in main.py. Decide before claude-05.
+- Q-09 salary policy: SPEC 03 mitigates by allowing remote_mode substitute; revisit after first run metrics.
+
+### Watch-list (post-deploy)
+- Calibrate quality gate after first run: distribution of `gate_reject_*`.
+- Calibrate fuzzy-dup threshold (92) after first month: false-positive rate.
+- Validate Groq cost estimate (~$6/month) against actual.
