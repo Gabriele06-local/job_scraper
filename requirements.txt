@@ -18,6 +18,7 @@ groq
 pydantic>=2.0
 pydantic-settings
 lingua-language-detector
+rapidfuzz
 mongomock
 structlog
 httpx

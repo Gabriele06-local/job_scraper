@@ -454,8 +454,8 @@ def normalize_text(text: str) -> str:
 
 
 def compute_dedup_hash(title: str, company_name: str, source: str) -> str:
-    """sha1(title_normalized|company_normalized|source) per SPEC 01 §3."""
-    normalized = f"{normalize_text(title)}|{normalize_text(company_name)}|{source}"
+    """sha1(title_normalized|company_normalized|source_lower) per SPEC 01 §3."""
+    normalized = f"{normalize_text(title)}|{normalize_text(company_name)}|{source.lower()}"
     return hashlib.sha1(normalized.encode()).hexdigest()  # noqa: S324
 
 
