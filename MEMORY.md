@@ -1,10 +1,10 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01T16:00Z
+2026-05-01T18:00Z
 
 ## Project Status
-claude-08 complete. Migration runbook + dry-run-validated wipe-and-reimport script shipped. 263 tests green. Migration script ready at `scripts/migrate.py`. Execute manually with `--confirm` AFTER:
+STABLE — v1 implemented. All pipeline stages shipped (claude-03 through claude-09). 263 tests green. Operational docs complete. Migration script ready at `scripts/migrate.py`. Execute manually with `--confirm` AFTER:
 - Backup verified (`mongodump`)
 - Bun API in read-only mode
 - User has reviewed dry-run output (`docs/reports/03-migration-dryrun.md`)
@@ -226,6 +226,13 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 - **D-07-03**: max_age jobs force-expired without probe (posted_at < cutoff AND never probed). **Alt**: probe them too. **Rationale**: SPEC 04 §3.4; 60+ day old never-probed listings are certainly dead; avoids wasted HTTP calls.
 - **D-07-04**: `_DomainLimiter` asyncio.Lock for per-host rate limit. **Alt**: httpx `Limits(max_connections_per_host)`. **Rationale**: `httpx.Limits` has no per-host param in current version; Lock + timestamp enforces 1 req/s per host correctly.
 
+### claude-09 — Operational Docs (2026-05-01)
+
+- **D-09-01**: `README.md` fully rewritten from legacy (Apify/OpenAI references removed, CLI + Docker documented). **Alt**: patch incrementally. **Rationale**: legacy README referenced removed features (Apify, OpenAI); a full rewrite is cleaner and prevents confusion.
+- **D-09-02**: `.env.example` expanded to cover all `config.py` fields with inline comments. **Alt**: keep minimal. **Rationale**: first-run operator needs to know which vars are mandatory vs. optional without reading source.
+- **D-09-03**: `CHANGELOG.md` created at v1.0.0 grouping all claude-03..09 changes. **Alt**: per-feature changelogs. **Rationale**: single file easier to scan; v1.0.0 semantic marks the pipeline as stable.
+- **D-09-04**: `docs/runbooks/cost-monitoring.md` includes model-upgrade path (llama-3.1-8b-instant → llama-3.3-70b-versatile). **Rationale**: seniority accuracy 67.9% < 80%; operator should know cost impact before upgrading.
+
 ### claude-08 — Migration Runbook + Wipe-and-Reimport Script (2026-05-01)
 
 - **D-08-01**: `--confirm` is the destructive gate; absence (or `--dry-run`) keeps the script side-effect-free. **Alt**: `--yes-i-really-mean-it`-style boolean / two-step prompt. **Rationale**: explicit flag survives non-interactive shells (cron, CI) while making accidental destruction impossible without the explicit token.
@@ -301,6 +308,8 @@ Full issue list: `docs/reports/02-connectors-status.md`
 - Q-06 write path (direct Mongo vs Bun /jobs/import). Current: direct Mongo retained.
 - Q-08 TechMap / JobsCollider: still disabled in main.py. Decide before claude-05.
 - Q-09 salary policy: SPEC 03 mitigates by allowing remote_mode substitute; revisit after first run metrics.
+
+- **claude-09 — DONE**: README rewrite, docs/runbooks/{troubleshooting,operations,cost-monitoring}.md, .env.example expanded, CHANGELOG.md v1.0.0, MEMORY.md status → STABLE.
 
 ### Watch-list (post-deploy)
 - Calibrate quality gate after first run: distribution of `gate_reject_*`.
