@@ -57,8 +57,15 @@ def merge_with_existing(existing: Job, new_raw: RawJob, jobs_col: Collection) ->
         "$inc": {"seen_count": 1},
     }
 
-    # Keep earliest posted_at
-    if new_raw.posted_at and existing.posted_at and new_raw.posted_at < existing.posted_at:
+    # Keep earliest posted_at (normalize to UTC to avoid naive/aware comparison)
+    def _utc(dt: datetime) -> datetime:
+        return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+    if (
+        new_raw.posted_at
+        and existing.posted_at
+        and _utc(new_raw.posted_at) < _utc(existing.posted_at)
+    ):
         update["$set"]["posted_at"] = new_raw.posted_at
         update["$set"]["published_at"] = new_raw.posted_at  # Bun compat
 

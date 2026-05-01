@@ -11,10 +11,18 @@
   },
   "expected_output": {
     "should_pass_prefilter": true,
-    "expected_status": "valid",
+    "expected_status": "premium",
     "expected_reject_reason": null,
     "ai_output": {
-      "skills": ["Angular", "TypeScript", "RxJS", "SCSS", "REST API", "Agile", "Git"],
+      "skills": [
+        "Angular",
+        "TypeScript",
+        "RxJS",
+        "SCSS",
+        "REST API",
+        "Agile",
+        "Git"
+      ],
       "category": "software_engineering",
       "seniority": "mid",
       "role_family": "frontend",
@@ -23,8 +31,13 @@
       "salary_min": 55000,
       "salary_max": 70000,
       "currency": "GBP",
-      "languages_required": ["en"],
-      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "languages_required": [
+        "en"
+      ],
+      "quality_flags": [
+        "has_requirements",
+        "has_tech_stack"
+      ],
       "confidence": 0.85
     }
   }

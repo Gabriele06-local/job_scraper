@@ -1,6 +1,6 @@
 """Groq client wrapper for single-call job classification.
 
-Retry: tenacity exp backoff, max 3 attempts.
+Retry: 3-attempt loop, exp backoff. JSON/validation errors → corrective hint on re-prompt.
 Rate limit: client-side token bucket (GROQ_RPM env).
 Logging: tokens in/out, latency per call.
 Cost: cumulative tracker emitted at run end.
@@ -9,6 +9,7 @@ Cost: cumulative tracker emitted at run end.
 from __future__ import annotations
 
 import json
+import random
 import threading
 import time
 from datetime import datetime, timezone
@@ -39,11 +40,18 @@ logger = structlog.get_logger(__name__)
 _INPUT_PRICE_PER_1M: float = 0.05
 _OUTPUT_PRICE_PER_1M: float = 0.08
 
-# Strict JSON schema sent to Groq (response_format json_object + Pydantic guard)
+# SPEC 02 §5 — strict schema sent in prompt + Pydantic guard (defense in depth)
 _CLASSIFICATION_SCHEMA: dict[str, Any] = {
     "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "skills", "category", "seniority", "role_family",
+        "employment_type", "remote_mode",
+        "salary_min", "salary_max", "currency",
+        "languages_required", "quality_flags", "confidence",
+    ],
     "properties": {
-        "skills": {"type": "array", "items": {"type": "string"}},
+        "skills": {"type": "array", "items": {"type": "string"}, "maxItems": 30},
         "category": {"type": "string"},
         "seniority": {
             "type": "string",
@@ -67,33 +75,66 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
             "type": "string",
             "enum": ["onsite", "hybrid", "remote", "unknown"],
         },
-        "salary_min": {"type": ["integer", "null"]},
-        "salary_max": {"type": ["integer", "null"]},
+        "salary_min": {"type": ["integer", "null"], "minimum": 0},
+        "salary_max": {"type": ["integer", "null"], "minimum": 0},
         "currency": {"type": ["string", "null"]},
         "languages_required": {"type": "array", "items": {"type": "string"}},
-        "quality_flags": {"type": "array", "items": {"type": "string"}},
-        "confidence": {"type": "number"},
+        "quality_flags": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "clear_jd", "has_responsibilities", "has_requirements",
+                    "has_benefits", "has_tech_stack", "vague", "boilerplate",
+                ],
+            },
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
     },
-    "required": [
-        "skills", "seniority", "role_family", "employment_type",
-        "remote_mode", "languages_required", "quality_flags", "confidence",
-    ],
 }
 
+# SPEC 02 §4 system prompt (constant — cache-friendly)
 _SYSTEM_PROMPT = (
-    "You are a technical recruiter classifier. "
-    "Extract structured information from job offers. "
-    "Return ONLY valid JSON matching the requested schema."
+    "You are a strict job-listing classifier. You receive a job offer and return ONLY "
+    "a JSON object that conforms to the provided schema. No prose, no markdown, no "
+    "explanations. If a field is unknown, use the schema's \"unknown\" enum value or "
+    "null per the schema. Do not invent skills or salary numbers. Confidence is your "
+    "self-assessment of overall extraction reliability (0..1)."
 )
 
+_SCHEMA_STR = json.dumps(_CLASSIFICATION_SCHEMA, separators=(",", ":"))
 
-def _build_user_prompt(text: str) -> str:
-    truncated = text[:4000]  # 4000 chars carries classification signal per SPEC 00 §5
-    schema_str = json.dumps(_CLASSIFICATION_SCHEMA, indent=2)
+
+def _build_user_prompt(text: str, correction: str = "") -> str:
+    """Build SPEC 02 §4 structured user prompt for plain-text input."""
+    truncated = text[:4000]
+    correction_block = f"\nIMPORTANT: {correction}\n" if correction else ""
     return (
-        f"Analyze this job offer and return JSON matching this schema:\n"
-        f"{schema_str}\n\n"
-        f"Job offer:\n{truncated}"
+        f"{correction_block}"
+        f"Job offer:\n{truncated}\n\n"
+        f"Return JSON conforming to schema:\n{_SCHEMA_STR}"
+    )
+
+
+def _build_structured_prompt(
+    title: str,
+    company_name: str,
+    location_raw: str,
+    detected_language: str,
+    description: str,
+    correction: str = "",
+) -> str:
+    """Build SPEC 02 §4 structured user prompt from individual fields."""
+    desc_truncated = description[:4000]
+    correction_block = f"\nIMPORTANT: {correction}\n" if correction else ""
+    return (
+        f"{correction_block}"
+        f"TITLE: {title}\n"
+        f"COMPANY: {company_name}\n"
+        f"LOCATION: {location_raw}\n"
+        f"DETECTED_LANGUAGE: {detected_language}\n"
+        f"DESCRIPTION (truncated to 4000 chars):\n{desc_truncated}\n\n"
+        f"Return JSON conforming to schema:\n{_SCHEMA_STR}"
     )
 
 
@@ -218,8 +259,58 @@ class GroqClassifier:
         self._client = client or groq.Groq(api_key=settings.groq_api_key)
         self._rate_limiter = _RateLimiter(settings.groq_rpm)
 
+    def classify(self, job_raw: dict[str, Any]) -> JobClassification | None:
+        """Classify a job from raw dict (SPEC 02 §4 structured prompt).
+
+        Args:
+            job_raw: Dict with keys title, company_name, location_raw,
+                     detected_language, description. url used for logging.
+
+        Returns:
+            JobClassification on success, None on persistent failure (caller
+            marks reject_reason=AI_UNAVAILABLE per SPEC 03 §4.3).
+        """
+        correction = ""
+        for attempt in range(1, 4):
+            try:
+                prompt = _build_structured_prompt(
+                    title=job_raw.get("title", ""),
+                    company_name=job_raw.get("company_name", ""),
+                    location_raw=job_raw.get("location_raw", "unknown"),
+                    detected_language=job_raw.get("detected_language", "unknown"),
+                    description=job_raw.get("description", ""),
+                    correction=correction,
+                )
+                return self._single_call(prompt)
+            except (groq.RateLimitError, groq.APITimeoutError, groq.InternalServerError) as exc:
+                wait = min(2 ** attempt, 30) + random.random()
+                logger.warning(
+                    "groq.api_retry",
+                    attempt=attempt,
+                    error=str(exc)[:120],
+                    wait_s=round(wait, 1),
+                    url=job_raw.get("url", ""),
+                )
+                if attempt < 3:
+                    time.sleep(wait)
+                else:
+                    logger.error("groq.exhausted_api", url=job_raw.get("url", ""))
+                    return None
+            except (json.JSONDecodeError, ValidationError) as exc:
+                correction = f"Your previous response was invalid. Error: {str(exc)[:200]}"
+                logger.warning(
+                    "groq.validation_retry",
+                    attempt=attempt,
+                    error=str(exc)[:120],
+                    url=job_raw.get("url", ""),
+                )
+                if attempt == 3:
+                    logger.error("groq.exhausted_validation", url=job_raw.get("url", ""))
+                    return None
+        return None
+
     def classify_job(self, text: str) -> JobClassification:
-        """Classify a job offer text.
+        """Classify a job offer from free-form text (legacy interface).
 
         Args:
             text: Combined title + description (caller builds the string).
@@ -243,6 +334,10 @@ class GroqClassifier:
         reraise=True,
     )
     def _call_with_retry(self, text: str) -> JobClassification:
+        return self._single_call(_build_user_prompt(text))
+
+    def _single_call(self, user_prompt: str) -> JobClassification:
+        """Execute one Groq API call; raises on error (no retry here)."""
         self._rate_limiter.acquire()
 
         t0 = time.monotonic()
@@ -250,7 +345,7 @@ class GroqClassifier:
             model=settings.groq_model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": _build_user_prompt(text)},
+                {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
             max_tokens=settings.groq_max_tokens,
@@ -281,13 +376,17 @@ class GroqClassifier:
             logger.warning("groq.json_parse_error", error=str(e), content=raw_content[:200])
             raise
 
+        # Some model invocations wrap the JSON object in a list — unwrap gracefully
+        if isinstance(raw_dict, list) and len(raw_dict) == 1 and isinstance(raw_dict[0], dict):
+            raw_dict = raw_dict[0]
+
         try:
             parsed = _GroqOutput.model_validate(raw_dict)
         except ValidationError as e:
             logger.warning("groq.validation_error", error=str(e))
             raise
 
-        # skills lexicon split is TODO in claude-06; all skills → technical_skills
+        # skills lexicon split deferred to claude-06; all Groq skills → technical_skills
         return JobClassification(
             technical_skills=parsed.skills,
             skills=[],

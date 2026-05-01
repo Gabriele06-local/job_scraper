@@ -11,10 +11,19 @@
   },
   "expected_output": {
     "should_pass_prefilter": true,
-    "expected_status": "valid",
+    "expected_status": "premium",
     "expected_reject_reason": null,
     "ai_output": {
-      "skills": ["React", "TypeScript", "Redux", "SCSS", "Testing Library", "REST API", "Git", "Scrum"],
+      "skills": [
+        "React",
+        "TypeScript",
+        "Redux",
+        "SCSS",
+        "Testing Library",
+        "REST API",
+        "Git",
+        "Scrum"
+      ],
       "category": "frontend",
       "seniority": "mid",
       "role_family": "frontend",
@@ -23,8 +32,13 @@
       "salary_min": 55000,
       "salary_max": 70000,
       "currency": "EUR",
-      "languages_required": ["de"],
-      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "languages_required": [
+        "de"
+      ],
+      "quality_flags": [
+        "has_requirements",
+        "has_tech_stack"
+      ],
       "confidence": 0.86
     }
   }

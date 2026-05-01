@@ -11,10 +11,19 @@
   },
   "expected_output": {
     "should_pass_prefilter": true,
-    "expected_status": "valid",
+    "expected_status": "premium",
     "expected_reject_reason": null,
     "ai_output": {
-      "skills": ["Python", "Django", "FastAPI", "PostgreSQL", "Redis", "Docker", "GitLab CI", "REST API"],
+      "skills": [
+        "Python",
+        "Django",
+        "FastAPI",
+        "PostgreSQL",
+        "Redis",
+        "Docker",
+        "GitLab CI",
+        "REST API"
+      ],
       "category": "backend",
       "seniority": "mid",
       "role_family": "backend",
@@ -23,8 +32,13 @@
       "salary_min": 50000,
       "salary_max": 65000,
       "currency": "EUR",
-      "languages_required": ["fr"],
-      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "languages_required": [
+        "fr"
+      ],
+      "quality_flags": [
+        "has_requirements",
+        "has_tech_stack"
+      ],
       "confidence": 0.85
     }
   }
