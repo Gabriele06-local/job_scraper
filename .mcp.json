@@ -2,7 +2,7 @@
   "mcpServers": {
     "mongodb": {
       "command": "npx",
-      "args": ["-y", "mongodb-mcp-server", "--connectionString", "mongodb://localhost:27017/devboards"]
+      "args": ["-y", "mongodb-mcp-server", "--connectionString", "mongodb://localhost:27017/itjobhub"]
     },
     "context7": {
       "command": "npx",
