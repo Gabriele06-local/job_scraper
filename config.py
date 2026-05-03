@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     groq_max_tokens: int = 1024
     groq_temperature: float = 0.1
     groq_timeout: int = 30
-    groq_rpm: int = 30  # client-side rate limit (requests per minute)
+    groq_rpm: int = 50  # client-side rate limit (requests per minute)
 
     # Logging
     log_level: str = "INFO"
