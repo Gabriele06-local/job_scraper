@@ -7,15 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 class AdzunaScraper(BaseScraper):
-    """Scraper for Adzuna API (Supports many countries)"""
+    """Scraper for Adzuna API (supports multiple countries)."""
 
-    COUNTRY_MAP = {
-        "en": "gb",  # or us, ca, etc.
-        "it": "it",
-        "es": "es",
-        "fr": "fr",
-        "de": "de",
-    }
+    COUNTRIES = ["gb", "us", "de", "nl", "fr", "au", "ca", "at", "be", "nz"]
 
     def __init__(self, app_id: str, app_key: str):
         self.app_id = app_id
@@ -28,9 +22,10 @@ class AdzunaScraper(BaseScraper):
         lang: str = "it",
         category: str = "it-jobs",
         page: int = 1,
+        country: str | None = None,
     ) -> List[Dict]:
-        country = self.COUNTRY_MAP.get(lang, "it")
-        url = f"{self.base_url}/{country}/search/{page}"
+        _country = country or "it"
+        url = f"{self.base_url}/{_country}/search/{page}"
 
         params = {
             "app_id": self.app_id,
@@ -67,6 +62,7 @@ class AdzunaScraper(BaseScraper):
                         "location_raw": item.get("location", {}).get("display_name"),
                         "source": "Adzuna",
                         "original_language": lang,
+                        "country": _country,
                         "published_at": item.get("created"),
                         "salary_min": item.get("salary_min"),
                         "salary_max": item.get("salary_max"),
