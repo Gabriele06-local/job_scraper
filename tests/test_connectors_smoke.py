@@ -35,6 +35,14 @@ _EXPECTED_REGISTRY_KEYS = {
     "remoteok",
     "jobicy",
     "rss",
+    "himalayas",
+    "remotive",
+    "themuse",
+    "reed",
+    "greenhouse",
+    "lever",
+    "ashby",
+    "personio",
 }
 
 _ENABLED_COUNT = sum(1 for e in REGISTRY.values() if e.enabled)
@@ -119,7 +127,7 @@ def test_fetch_returns_iterator() -> None:
 def test_adzuna_fetch_empty_response() -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = _mock_json_response({"results": []})
-        c = AdzunaConnector(keywords=["python"], languages=["en"])
+        c = AdzunaConnector(keywords=["python"], countries=["gb"])
         jobs = list(itertools.islice(c.fetch(), 5))
     assert isinstance(jobs, list)
 
@@ -141,7 +149,7 @@ def test_adzuna_fetch_with_data() -> None:
     }
     with patch("requests.get") as mock_get:
         mock_get.return_value = _mock_json_response(payload)
-        c = AdzunaConnector(keywords=["python"], languages=["en"])
+        c = AdzunaConnector(keywords=["python"], countries=["gb"])
         jobs = list(itertools.islice(c.fetch(), 5))
     assert len(jobs) == 1
     assert jobs[0]["title"] == "Python Developer"

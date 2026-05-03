@@ -23,24 +23,26 @@ class AdzunaConnector(BaseConnector):
     def __init__(
         self,
         keywords: list[str] | None = None,
-        languages: list[str] | None = None,
+        countries: list[str] | None = None,
     ) -> None:
         self._scraper = AdzunaScraper(
             app_id=settings.adzuna_app_id,
             app_key=settings.adzuna_app_key,
         )
         self._keywords = keywords or settings.scrape_keywords
-        self._languages = languages or settings.scrape_languages
+        self._countries = countries or AdzunaScraper.COUNTRIES
 
     def fetch(self) -> Iterator[dict]:
-        for lang in self._languages:
+        for country in self._countries:
             for keyword in self._keywords:
                 try:
-                    jobs = asyncio.run(self._scraper.scrape(keyword=keyword, lang=lang))
+                    jobs = asyncio.run(
+                        self._scraper.scrape(keyword=keyword, country=country)
+                    )
                     log.debug(
                         "adzuna.fetched",
                         keyword=keyword,
-                        lang=lang,
+                        country=country,
                         count=len(jobs),
                     )
                     yield from jobs
@@ -48,6 +50,6 @@ class AdzunaConnector(BaseConnector):
                     log.error(
                         "adzuna.fetch_error",
                         keyword=keyword,
-                        lang=lang,
+                        country=country,
                         error=str(exc),
                     )

@@ -18,8 +18,6 @@ log = structlog.get_logger(__name__)
 _DEFAULT_RSS_URLS: dict[str, list[str]] = {
     "en": [
         "https://weworkremotely.com/categories/remote-programming-jobs.rss",
-        "https://himalayas.app/jobs/rss",
-        "https://remotive.io/remote-jobs/feed",
         "https://jobicy.com/feed",
     ],
 }

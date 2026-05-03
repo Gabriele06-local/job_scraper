@@ -20,12 +20,20 @@ from config import settings
 
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
+from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
+from .greenhouse import GreenhouseConnector
+from .himalayas import HimalayasConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
 from .jooble import JoobleConnector
+from .lever import LeverConnector
+from .personio import PersonioConnector
+from .reed import ReedConnector
 from .remoteok import RemoteOKConnector
+from .remotive import RemotiveConnector
 from .rss import RSSConnector
+from .themuse import TheMuseConnector
 
 if TYPE_CHECKING:
     pass
@@ -52,6 +60,14 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "remoteok": ConnectorEntry(cls=RemoteOKConnector, enabled=True),
     "jobicy": ConnectorEntry(cls=JobicyConnector, enabled=True),
     "rss": ConnectorEntry(cls=RSSConnector, enabled=True),
+    "himalayas": ConnectorEntry(cls=HimalayasConnector, enabled=True),
+    "remotive": ConnectorEntry(cls=RemotiveConnector, enabled=True),
+    "themuse": ConnectorEntry(cls=TheMuseConnector, enabled=True),
+    "reed": ConnectorEntry(cls=ReedConnector, enabled=True),
+    "greenhouse": ConnectorEntry(cls=GreenhouseConnector, enabled=True),
+    "lever": ConnectorEntry(cls=LeverConnector, enabled=True),
+    "ashby": ConnectorEntry(cls=AshbyConnector, enabled=True),
+    "personio": ConnectorEntry(cls=PersonioConnector, enabled=True),
 }
 
 
@@ -84,9 +100,24 @@ def get_enabled_connectors() -> list[BaseConnector]:
 
 
 __all__ = [
+    "AdzunaConnector",
+    "ArbeitnowConnector",
+    "AshbyConnector",
     "BaseConnector",
     "ConnectorEntry",
+    "GreenhouseConnector",
+    "HimalayasConnector",
+    "IProgrammatoriConnector",
+    "JobicyConnector",
+    "JoobleConnector",
+    "LeverConnector",
+    "PersonioConnector",
     "REGISTRY",
+    "ReedConnector",
+    "RemoteOKConnector",
+    "RemotiveConnector",
+    "RSSConnector",
     "SourceType",
+    "TheMuseConnector",
     "get_enabled_connectors",
 ]
