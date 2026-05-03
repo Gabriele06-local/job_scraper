@@ -11,10 +11,18 @@
   },
   "expected_output": {
     "should_pass_prefilter": true,
-    "expected_status": "rejected_quality",
-    "expected_reject_reason": "NO_SALARY_AND_NO_REMOTE_MODE",
+    "expected_status": "valid",
+    "expected_reject_reason": null,
     "ai_output": {
-      "skills": ["Penetration Testing", "OWASP", "Burp Suite", "Python", "Nmap", "SIEM", "Linux"],
+      "skills": [
+        "Penetration Testing",
+        "OWASP",
+        "Burp Suite",
+        "Python",
+        "Nmap",
+        "SIEM",
+        "Linux"
+      ],
       "category": "security",
       "seniority": "mid",
       "role_family": "security",
@@ -23,8 +31,13 @@
       "salary_min": null,
       "salary_max": null,
       "currency": null,
-      "languages_required": ["en"],
-      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "languages_required": [
+        "en"
+      ],
+      "quality_flags": [
+        "has_requirements",
+        "has_tech_stack"
+      ],
       "confidence": 0.82
     }
   }

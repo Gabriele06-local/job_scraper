@@ -2,7 +2,7 @@
 
 Verifies:
 - BaseConnector interface (source_name, source_type, rate_limit_seconds)
-- Registry completeness and disabled flags
+- Registry completeness and enabled flags
 - get_enabled_connectors() returns correct count
 - Each connector's fetch() is callable and yields dicts (mocked HTTP)
 """
@@ -19,32 +19,30 @@ from connectors.arbeitnow import ArbeitnowConnector
 from connectors.base import BaseConnector
 from connectors.iprogrammatori import IProgrammatoriConnector
 from connectors.jobicy import JobicyConnector
-from connectors.jobisjob import JobisJobConnector
-from connectors.jobscollider import JobsColliderConnector
 from connectors.jooble import JoobleConnector
-from connectors.linkedin import LinkedInConnector
 from connectors.remoteok import RemoteOKConnector
-from connectors.reteinformaticalavoro import ReteInformaticaLavoroConnector
 from connectors.rss import RSSConnector
-from connectors.techmap import TechMapConnector
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _EXPECTED_REGISTRY_KEYS = {
-    "linkedin",
     "adzuna",
     "jooble",
-    "jobisjob",
     "iprogrammatori",
     "arbeitnow",
     "remoteok",
     "jobicy",
-    "reteinformaticalavoro",
     "rss",
-    "techmap",
-    "jobscollider",
+    "himalayas",
+    "remotive",
+    "themuse",
+    "reed",
+    "greenhouse",
+    "lever",
+    "ashby",
+    "personio",
 }
 
 _ENABLED_COUNT = sum(1 for e in REGISTRY.values() if e.enabled)
@@ -84,11 +82,9 @@ def test_registry_completeness() -> None:
     assert set(REGISTRY.keys()) == _EXPECTED_REGISTRY_KEYS
 
 
-def test_registry_disabled_connectors() -> None:
-    assert not REGISTRY["techmap"].enabled, "TechMap must be disabled"
-    assert not REGISTRY["jobscollider"].enabled, "JobsCollider must be disabled"
-    assert REGISTRY["techmap"].disabled_reason
-    assert REGISTRY["jobscollider"].disabled_reason
+def test_all_connectors_enabled() -> None:
+    for name, entry in REGISTRY.items():
+        assert entry.enabled, f"{name}: must be enabled (remove disabled connectors instead)"
 
 
 def test_all_connectors_have_required_class_attrs() -> None:
@@ -117,15 +113,10 @@ def test_get_enabled_connectors_all_base() -> None:
 
 
 def test_fetch_returns_iterator() -> None:
-    """fetch() must return an Iterator regardless of connector type."""
-    disabled_connectors: list[BaseConnector] = [
-        TechMapConnector(),
-        JobsColliderConnector(),
-    ]
-    for c in disabled_connectors:
+    """fetch() must return an Iterator for all registered connectors."""
+    for c in get_enabled_connectors():
         result = c.fetch()
         assert isinstance(result, Iterator)
-        assert list(result) == []  # disabled connectors yield nothing
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +127,7 @@ def test_fetch_returns_iterator() -> None:
 def test_adzuna_fetch_empty_response() -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = _mock_json_response({"results": []})
-        c = AdzunaConnector(keywords=["python"], languages=["en"])
+        c = AdzunaConnector(keywords=["python"], countries=["gb"])
         jobs = list(itertools.islice(c.fetch(), 5))
     assert isinstance(jobs, list)
 
@@ -158,7 +149,7 @@ def test_adzuna_fetch_with_data() -> None:
     }
     with patch("requests.get") as mock_get:
         mock_get.return_value = _mock_json_response(payload)
-        c = AdzunaConnector(keywords=["python"], languages=["en"])
+        c = AdzunaConnector(keywords=["python"], countries=["gb"])
         jobs = list(itertools.islice(c.fetch(), 5))
     assert len(jobs) == 1
     assert jobs[0]["title"] == "Python Developer"
@@ -190,14 +181,6 @@ def test_jobicy_fetch_empty_response() -> None:
     assert isinstance(jobs, list)
 
 
-def test_jobisjob_fetch_empty_response() -> None:
-    with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_html_response()
-        c = JobisJobConnector(keywords=["python"], languages=["it"])
-        jobs = list(itertools.islice(c.fetch(), 5))
-    assert isinstance(jobs, list)
-
-
 def test_jooble_fetch_no_api_key() -> None:
     # Without API key, scraper returns [] immediately without HTTP call
     c = JoobleConnector(keywords=["python"], languages=["it"])
@@ -205,14 +188,6 @@ def test_jooble_fetch_no_api_key() -> None:
     jobs = list(itertools.islice(c.fetch(), 5))
     assert isinstance(jobs, list)
     assert jobs == []
-
-
-def test_linkedin_fetch_empty_response() -> None:
-    with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_html_response()
-        c = LinkedInConnector(keywords=["python"], languages=["it"])
-        jobs = list(itertools.islice(c.fetch(), 5))
-    assert isinstance(jobs, list)
 
 
 def test_remoteok_fetch_empty_response() -> None:
@@ -244,14 +219,6 @@ def test_remoteok_fetch_with_data() -> None:
     assert jobs[0]["title"] == "Python Engineer"
 
 
-def test_reteinformaticalavoro_fetch_empty() -> None:
-    with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_html_response()
-        c = ReteInformaticaLavoroConnector(keywords=["python"])
-        jobs = list(itertools.islice(c.fetch(), 5))
-    assert isinstance(jobs, list)
-
-
 def test_rss_fetch_empty_feed() -> None:
     xml = (
         "<?xml version='1.0'?>"
@@ -265,15 +232,3 @@ def test_rss_fetch_empty_feed() -> None:
         )
         jobs = list(itertools.islice(c.fetch(), 5))
     assert isinstance(jobs, list)
-
-
-def test_techmap_fetch_yields_nothing() -> None:
-    c = TechMapConnector()
-    jobs = list(c.fetch())
-    assert jobs == []
-
-
-def test_jobscollider_fetch_yields_nothing() -> None:
-    c = JobsColliderConnector()
-    jobs = list(c.fetch())
-    assert jobs == []

@@ -20,17 +20,20 @@ from config import settings
 
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
+from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
+from .greenhouse import GreenhouseConnector
+from .himalayas import HimalayasConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
-from .jobisjob import JobisJobConnector
-from .jobscollider import JobsColliderConnector
 from .jooble import JoobleConnector
-from .linkedin import LinkedInConnector
+from .lever import LeverConnector
+from .personio import PersonioConnector
+from .reed import ReedConnector
 from .remoteok import RemoteOKConnector
-from .reteinformaticalavoro import ReteInformaticaLavoroConnector
+from .remotive import RemotiveConnector
 from .rss import RSSConnector
-from .techmap import TechMapConnector
+from .themuse import TheMuseConnector
 
 if TYPE_CHECKING:
     pass
@@ -50,29 +53,21 @@ class ConnectorEntry:
 # Static registry — enabled flag reflects code-level known-good state.
 # Runtime override via settings.disabled_connectors.
 REGISTRY: dict[str, ConnectorEntry] = {
-    "linkedin": ConnectorEntry(cls=LinkedInConnector, enabled=True),
     "adzuna": ConnectorEntry(cls=AdzunaConnector, enabled=True),
     "jooble": ConnectorEntry(cls=JoobleConnector, enabled=True),
-    "jobisjob": ConnectorEntry(cls=JobisJobConnector, enabled=True),
     "iprogrammatori": ConnectorEntry(cls=IProgrammatoriConnector, enabled=True),
     "arbeitnow": ConnectorEntry(cls=ArbeitnowConnector, enabled=True),
     "remoteok": ConnectorEntry(cls=RemoteOKConnector, enabled=True),
     "jobicy": ConnectorEntry(cls=JobicyConnector, enabled=True),
-    "reteinformaticalavoro": ConnectorEntry(
-        cls=ReteInformaticaLavoroConnector, enabled=True
-    ),
     "rss": ConnectorEntry(cls=RSSConnector, enabled=True),
-    # Disabled — issues tracked in docs/reports/02-connectors-status.md
-    "techmap": ConnectorEntry(
-        cls=TechMapConnector,
-        enabled=False,
-        disabled_reason="API spec incomplete; bearer token unverified",
-    ),
-    "jobscollider": ConnectorEntry(
-        cls=JobsColliderConnector,
-        enabled=False,
-        disabled_reason="Category RSS feed returns 404",
-    ),
+    "himalayas": ConnectorEntry(cls=HimalayasConnector, enabled=True),
+    "remotive": ConnectorEntry(cls=RemotiveConnector, enabled=True),
+    "themuse": ConnectorEntry(cls=TheMuseConnector, enabled=True),
+    "reed": ConnectorEntry(cls=ReedConnector, enabled=True),
+    "greenhouse": ConnectorEntry(cls=GreenhouseConnector, enabled=True),
+    "lever": ConnectorEntry(cls=LeverConnector, enabled=True),
+    "ashby": ConnectorEntry(cls=AshbyConnector, enabled=True),
+    "personio": ConnectorEntry(cls=PersonioConnector, enabled=True),
 }
 
 
@@ -105,9 +100,24 @@ def get_enabled_connectors() -> list[BaseConnector]:
 
 
 __all__ = [
+    "AdzunaConnector",
+    "ArbeitnowConnector",
+    "AshbyConnector",
     "BaseConnector",
     "ConnectorEntry",
+    "GreenhouseConnector",
+    "HimalayasConnector",
+    "IProgrammatoriConnector",
+    "JobicyConnector",
+    "JoobleConnector",
+    "LeverConnector",
+    "PersonioConnector",
     "REGISTRY",
+    "ReedConnector",
+    "RemoteOKConnector",
+    "RemotiveConnector",
+    "RSSConnector",
     "SourceType",
+    "TheMuseConnector",
     "get_enabled_connectors",
 ]

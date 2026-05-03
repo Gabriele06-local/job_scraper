@@ -87,25 +87,61 @@ def _dict_to_raw_job(d: dict) -> RawJob | None:  # type: ignore[type-arg]
 def cmd_import(args: argparse.Namespace) -> int:
     """Full pipeline: fetch → normalize → pre-filter → AI classify → persist."""
     from connectors import get_enabled_connectors
+    from connectors.adzuna import AdzunaConnector
+    from database.repository import get_db
+    from pipeline.budget import DailyBudget
+    from pipeline.import_run import ImportRunRecord, ImportRunTracker
     from pipeline.orchestrator import ImportPipeline
 
     ensure_indexes()
+    db = get_db()
     jobs_col = get_jobs()
     pipeline = ImportPipeline(jobs_col=jobs_col, dry_run=args.dry_run)
+    tracker = ImportRunTracker(db)
 
     connectors = get_enabled_connectors()
+
+    # Inject Adzuna daily budget now that DB is ready.
+    for connector in connectors:
+        if isinstance(connector, AdzunaConnector):
+            connector.set_budget(DailyBudget(db, "adzuna"))
+
     log.info("cli.import.start", connectors=len(connectors), dry_run=args.dry_run)
 
     all_raw = []
     for connector in connectors:
         name = connector.source_name
+        started_at = datetime.now(tz=timezone.utc)
+        fetched = 0
+        run_status: str = "success"
+        error_msg: str | None = None
         try:
             for raw_dict in connector.fetch():
+                fetched += 1
                 raw_job = _dict_to_raw_job(raw_dict)
                 if raw_job is not None:
                     all_raw.append(raw_job)
         except Exception as exc:
-            log.error("cli.import.connector_error", connector=name, error=str(exc))
+            run_status = "failed"
+            error_msg = str(exc)
+            log.error("cli.import.connector_error", connector=name, error=exc)
+        finally:
+            if not args.dry_run:
+                record = ImportRunRecord(
+                    provider_name=name,
+                    started_at=started_at,
+                    completed_at=datetime.now(tz=timezone.utc),
+                    jobs_fetched=fetched,
+                    status=run_status,  # type: ignore[arg-type]
+                    error_message=error_msg,
+                )
+                tracker.save(record)
+                if tracker.should_disable(name):
+                    log.warning(
+                        "cli.import.provider_consecutive_failures",
+                        provider=name,
+                        consecutive=3,
+                    )
 
     if args.limit:
         all_raw = all_raw[: args.limit]

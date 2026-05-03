@@ -12,6 +12,7 @@ from enum import Enum
 import structlog
 
 from models.job import (
+    EmploymentType,
     Job,
     JobClassification,
     JobQuality,
@@ -37,12 +38,13 @@ _REMOTE_SCORE = {
 
 
 class QualityRejectReason(str, Enum):
-    """Reject reasons set by the quality gate (SPEC 03 §4.2–4.3)."""
+    """Reject reasons set by the quality gate."""
 
     INSUFFICIENT_SKILLS = "INSUFFICIENT_SKILLS"
     UNKNOWN_SENIORITY = "UNKNOWN_SENIORITY"
     UNKNOWN_ROLE_FAMILY = "UNKNOWN_ROLE_FAMILY"
-    NO_SALARY_AND_NO_REMOTE_MODE = "NO_SALARY_AND_NO_REMOTE_MODE"
+    UNKNOWN_REMOTE_MODE = "UNKNOWN_REMOTE_MODE"
+    UNKNOWN_EMPLOYMENT_TYPE = "UNKNOWN_EMPLOYMENT_TYPE"
     LOW_CONFIDENCE = "LOW_CONFIDENCE"
     AI_UNAVAILABLE = "AI_UNAVAILABLE"
 
@@ -98,12 +100,11 @@ def passes_quality_gate(
     if classification.role_family == RoleFamily.OTHER:
         return False, [QualityRejectReason.UNKNOWN_ROLE_FAMILY.value]
 
-    has_salary = (
-        classification.salary_min is not None or classification.salary_max is not None
-    )
-    has_remote = classification.remote_mode in (RemoteMode.HYBRID, RemoteMode.REMOTE)
-    if not has_salary and not has_remote:
-        return False, [QualityRejectReason.NO_SALARY_AND_NO_REMOTE_MODE.value]
+    if classification.remote_mode == RemoteMode.UNKNOWN:
+        return False, [QualityRejectReason.UNKNOWN_REMOTE_MODE.value]
+
+    if classification.employment_type == EmploymentType.UNKNOWN:
+        return False, [QualityRejectReason.UNKNOWN_EMPLOYMENT_TYPE.value]
 
     if classification.ai_confidence < threshold:
         return False, [QualityRejectReason.LOW_CONFIDENCE.value]
@@ -132,8 +133,7 @@ def evaluate(job: Job) -> Job:
     cl = job.classification
 
     score = compute_quality_score(cl)
-    # Store as 0..1 float in the model; integer representation kept for metrics
-    job.quality = JobQuality(quality_score=score / 100.0)
+    job.quality = JobQuality(quality_score=score)
 
     passes, reasons = passes_quality_gate(cl)
     if not passes:

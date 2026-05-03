@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     groq_max_tokens: int = 1024
     groq_temperature: float = 0.1
     groq_timeout: int = 30
-    groq_rpm: int = 30  # client-side rate limit (requests per minute)
+    groq_rpm: int = 50  # client-side rate limit (requests per minute)
 
     # Logging
     log_level: str = "INFO"
@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
     jooble_api_key: str = ""
-    linkedin_max_results: int = 25
+    reed_api_key: str = ""
+    themuse_api_key: str = ""
 
     # Search config — override via comma-separated env vars
     scrape_languages: list[str] = ["it", "en", "es", "fr", "de"]
