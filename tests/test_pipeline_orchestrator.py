@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 from models.job import (
+    EmploymentType,
     JobClassification,
     RawJob,
     RemoteMode,
@@ -47,13 +48,12 @@ def _raw(
 
 
 def _good_classification() -> JobClassification:
-    # Qualifies as VALID (not premium): 2 skills, remote mode (salary substitute), confidence 0.80
-    # Premium needs ≥4 skills + full salary + confidence≥0.85 + clear_jd/has_requirements
     return JobClassification(
         technical_skills=["Python", "Django"],
         seniority=Seniority.SENIOR,
         role_family=RoleFamily.BACKEND,
         remote_mode=RemoteMode.REMOTE,
+        employment_type=EmploymentType.FULL_TIME,
         salary_min=None,
         salary_max=None,
         currency=None,
@@ -68,6 +68,7 @@ def _premium_classification() -> JobClassification:
         seniority=Seniority.SENIOR,
         role_family=RoleFamily.BACKEND,
         remote_mode=RemoteMode.REMOTE,
+        employment_type=EmploymentType.FULL_TIME,
         salary_min=90000,
         salary_max=130000,
         currency="EUR",

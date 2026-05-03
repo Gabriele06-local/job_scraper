@@ -79,6 +79,19 @@ class Seniority(str, Enum):
     UNKNOWN = "unknown"
 
 
+class Category(str, Enum):
+    SOFTWARE_ENGINEERING = "software-engineering"
+    DEVOPS_SYSADMIN = "devops-sysadmin"
+    DATA_ML = "data-ml"
+    DESIGN = "design"
+    PRODUCT_MANAGEMENT = "product-management"
+    ENGINEERING_MANAGEMENT = "engineering-management"
+    SECURITY = "security"
+    QA_TESTING = "qa-testing"
+    MOBILE = "mobile"
+    OTHER_IT = "other-it"
+
+
 # ---------------------------------------------------------------------------
 # Sub-models
 # ---------------------------------------------------------------------------
@@ -145,6 +158,7 @@ class JobSalary(BaseModel):
     min: int | None = None
     max: int | None = None
     currency: str | None = None  # ISO-4217
+    period: str | None = None  # annual | monthly | hourly
 
 
 class JobClassification(BaseModel):
@@ -159,7 +173,7 @@ class JobClassification(BaseModel):
 
     technical_skills: list[str] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
-    category: str | None = None
+    category: Category | None = None
     role_family: RoleFamily = RoleFamily.OTHER
     seniority: Seniority = Seniority.UNKNOWN
     employment_type: EmploymentType = EmploymentType.UNKNOWN
@@ -186,7 +200,7 @@ class JobClassification(BaseModel):
 class JobQuality(BaseModel):
     """Quality gate output (flattened to top-level in MongoDB)."""
 
-    quality_score: float = 0.0
+    quality_score: int = 0  # 0-100
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +229,9 @@ class Job(BaseModel):
     salary: JobSalary = Field(default_factory=JobSalary)
     classification: JobClassification = Field(default_factory=JobClassification)
     quality: JobQuality = Field(default_factory=JobQuality)
+
+    # AI enrichment flag
+    enriched_by_ai: bool = False
 
     # Lifecycle
     status: JobStatus = JobStatus.VALID
@@ -269,6 +286,7 @@ class Job(BaseModel):
             # Status
             "status": self.status.value,
             "reject_reason": self.reject_reason,
+            "enriched_by_ai": self.enriched_by_ai,
             # Company (nested)
             "company": {
                 "name": self.company.name,
@@ -297,7 +315,7 @@ class Job(BaseModel):
             "employment_type": cl.employment_type.value,
             "technical_skills": cl.technical_skills,
             "skills": cl.skills,
-            "category": cl.category,
+            "category": cl.category.value if cl.category is not None else None,
             "role_family": cl.role_family.value,
             "seniority": cl.seniority.value,
             "languages_required": cl.languages_required,
@@ -311,6 +329,7 @@ class Job(BaseModel):
             "salary_min": self.salary.min if self.salary.min is not None else cl.salary_min,
             "salary_max": self.salary.max if self.salary.max is not None else cl.salary_max,
             "currency": self.salary.currency or cl.currency,
+            "salary_period": self.salary.period,
             # Quality (flattened)
             "quality_score": self.quality.quality_score,
             # Legacy
@@ -381,11 +400,12 @@ class Job(BaseModel):
                 min=doc.get("salary_min"),
                 max=doc.get("salary_max"),
                 currency=doc.get("currency"),
+                period=doc.get("salary_period"),
             ),
             classification=JobClassification(
                 technical_skills=doc.get("technical_skills", []),
                 skills=doc.get("skills", []),
-                category=doc.get("category"),
+                category=_safe_enum(Category, doc.get("category"), None),
                 role_family=_safe_enum(RoleFamily, doc.get("role_family"), RoleFamily.OTHER),
                 seniority=_safe_enum(Seniority, doc.get("seniority"), Seniority.UNKNOWN),
                 employment_type=_safe_enum(
@@ -400,7 +420,8 @@ class Job(BaseModel):
                 ai_model=doc.get("ai_model", ""),
                 ai_call_at=doc.get("ai_call_at"),
             ),
-            quality=JobQuality(quality_score=doc.get("quality_score", 0.0)),
+            quality=JobQuality(quality_score=int(doc.get("quality_score", 0))),
+            enriched_by_ai=bool(doc.get("enriched_by_ai", False)),
             status=_safe_enum(JobStatus, doc.get("status"), JobStatus.VALID),
             reject_reason=doc.get("reject_reason"),
             posted_at=doc.get("posted_at") or doc.get("published_at") or _now_utc(),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -241,6 +241,23 @@ class TestPrefilterRejectMissingRequired:
         ok, reason = should_send_to_ai(_raw(posted_at=None))
         assert not ok
         assert reason == RejectReason.MISSING_REQUIRED_FIELDS.value
+
+    def test_expired_listing_rejected(self):
+        old_date = _NOW - timedelta(days=61)
+        ok, reason = should_send_to_ai(_raw(posted_at=old_date))
+        assert not ok
+        assert reason == RejectReason.EXPIRED_LISTING.value
+
+    def test_exactly_60_days_old_rejected(self):
+        cutoff_date = _NOW - timedelta(days=60, seconds=1)
+        ok, reason = should_send_to_ai(_raw(posted_at=cutoff_date))
+        assert not ok
+        assert reason == RejectReason.EXPIRED_LISTING.value
+
+    def test_59_days_old_passes_age_check(self):
+        recent = _NOW - timedelta(days=59)
+        ok, _ = should_send_to_ai(_raw(posted_at=recent, original_language="en"))
+        assert ok is True
 
 
 class TestPrefilterRejectDescriptionTooShort:
