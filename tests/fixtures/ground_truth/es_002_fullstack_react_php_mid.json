@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Desarrollador Fullstack React + PHP",
+    "company_name": "Agencia Digital SA",
+    "location_raw": "Madrid (Híbrido)",
+    "description": "Agencia Digital SA busca un Desarrollador Fullstack con experiencia en React y PHP para su equipo en Madrid. El candidato ideal tiene al menos 3 años de experiencia trabajando con React en el frontend y PHP 8 en el backend, junto con bases de datos MySQL y gestión de versiones con Git. Se requiere conocimiento de diseño de REST APIs y metodologías Agile/Scrum. Ofrecemos modelo de trabajo híbrido con 2-3 días presenciales en nuestras oficinas de Madrid y el resto en remoto. El salario oscila entre 35.000 y 50.000 EUR brutos anuales. Buen ambiente de trabajo y posibilidades de crecimiento dentro de la empresa.",
+    "detected_language": "es",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/es/54322",
+    "posted_at": "2026-04-22T11:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["React", "PHP", "MySQL", "JavaScript", "Git", "REST API", "Agile"],
+      "category": "fullstack",
+      "seniority": "mid",
+      "role_family": "fullstack",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": 35000,
+      "salary_max": 50000,
+      "currency": "EUR",
+      "languages_required": ["es"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.82
+    }
+  }
+}

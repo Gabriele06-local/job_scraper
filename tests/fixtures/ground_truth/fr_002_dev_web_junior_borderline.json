@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Développeur Web Junior",
+    "company_name": "Agence Web Paris SAS",
+    "location_raw": "Paris (Présentiel)",
+    "description": "Agence Web Paris SAS recherche un Développeur Web Junior pour renforcer son équipe créative. Vous interviendrez sur des projets de sites vitrines et e-commerce en utilisant HTML5, CSS3, JavaScript et jQuery, avec quelques notions de PHP pour des intégrations légères côté serveur. Expérience de 0 à 1 an acceptée, nous formons nos recrues en interne. Poste entièrement présentiel dans nos locaux parisiens, pas de télétravail possible. Aucune rémunération n'est mentionnée dans cette annonce, le salaire sera discuté lors de l'entretien.",
+    "detected_language": "fr",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/fr/72002",
+    "posted_at": "2026-04-23T10:30:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "rejected_quality",
+    "expected_reject_reason": "NO_SALARY_AND_NO_REMOTE_MODE",
+    "ai_output": {
+      "skills": ["HTML", "CSS", "JavaScript", "jQuery", "PHP"],
+      "category": "frontend",
+      "seniority": "junior",
+      "role_family": "frontend",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["fr"],
+      "quality_flags": ["has_requirements"],
+      "confidence": 0.74
+    }
+  }
+}

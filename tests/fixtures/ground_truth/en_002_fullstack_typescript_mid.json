@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Fullstack Engineer TypeScript",
+    "company_name": "TechStart Inc",
+    "location_raw": "Remote (US)",
+    "description": "TechStart Inc is a fast-growing SaaS startup building the next generation of developer productivity tools. We're looking for a Fullstack Engineer with strong TypeScript skills to join our core product team and help shape our platform from frontend to backend. You'll work across the entire stack, shipping features that directly impact thousands of daily active users. What you'll do: build responsive, accessible React interfaces using modern patterns (hooks, context, React Query), develop and maintain Node.js backend services with Express and REST API design, manage data persistence in MongoDB and caching layers with Redis, containerize services with Docker for consistent development and deployment environments, participate in code reviews, write tests, and contribute to technical documentation. Requirements: 3+ years of professional experience with TypeScript in both frontend and backend contexts, proficiency with React and component-driven UI development, solid understanding of Node.js and server-side JavaScript, experience with MongoDB data modeling, familiarity with Redis for caching and session management, Docker for local and CI/CD environments. Fully remote position, open to US-based candidates. Salary: USD 90,000 - 115,000 per year, with equity options.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234568",
+    "posted_at": "2026-04-20T11:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["TypeScript", "React", "Node.js", "Express", "MongoDB", "Redis", "Docker", "REST API"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "fullstack",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 90000,
+      "salary_max": 115000,
+      "currency": "USD",
+      "languages_required": ["en"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack"],
+      "confidence": 0.88
+    }
+  }
+}

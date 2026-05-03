@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Técnico de Soporte IT",
+    "company_name": "Servicios Globales SA",
+    "location_raw": "Sevilla (Presencial)",
+    "description": "Servicios Globales SA necesita incorporar un Técnico de Soporte IT para sus oficinas de Sevilla. Las tareas incluyen soporte a usuarios finales, instalación y configuración de equipos informáticos, resolución de incidencias hardware y software, gestión de tickets en sistema de ticketing interno, mantenimiento de equipos con Windows 10 y Office 365, y atención telefónica a empleados. Se valorará experiencia previa en soporte técnico y buena actitud ante el cliente. Jornada completa presencial en Sevilla.",
+    "detected_language": "es",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/es/54325",
+    "posted_at": "2026-04-23T10:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "rejected_quality",
+    "expected_reject_reason": "INSUFFICIENT_SKILLS",
+    "ai_output": {
+      "skills": ["Windows", "Office 365", "soporte técnico", "ticketing"],
+      "category": "support",
+      "seniority": "junior",
+      "role_family": "other",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["es"],
+      "quality_flags": ["boilerplate"],
+      "confidence": 0.75
+    }
+  }
+}

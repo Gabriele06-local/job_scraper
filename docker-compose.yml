@@ -1,0 +1,53 @@
+version: "3.9"
+
+x-common: &common
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  networks:
+    - devboards
+  volumes:
+    - health_data:/tmp
+
+services:
+  importer:
+    <<: *common
+    container_name: devboards_importer
+    command: >
+      sh -c "while true; do
+        python -m import_service.cli import;
+        sleep ${IMPORT_INTERVAL_SECONDS:-14400};
+      done"
+
+  expirer:
+    <<: *common
+    container_name: devboards_expirer
+    command: >
+      sh -c "while true; do
+        python -m import_service.cli expire;
+        sleep ${EXPIRE_INTERVAL_SECONDS:-86400};
+      done"
+
+  # One-shot jobs (run manually or from CI):
+  #   docker compose run --rm reindex
+  #   docker compose run --rm stats
+  reindex:
+    <<: *common
+    container_name: devboards_reindex
+    profiles: ["tools"]
+    command: ["python", "-m", "import_service.cli", "reindex"]
+    restart: "no"
+
+  stats:
+    <<: *common
+    container_name: devboards_stats
+    profiles: ["tools"]
+    command: ["python", "-m", "import_service.cli", "stats"]
+    restart: "no"
+
+networks:
+  devboards:
+    external: true
+
+volumes:
+  health_data:

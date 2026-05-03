@@ -9,7 +9,6 @@ import asyncio
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-import pytest
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -414,7 +413,6 @@ class TestScrapeIntegration:
     @patch("scrapers.reteinformaticalavoro_scraper.time.sleep")
     def test_detail_error_does_not_abort_other_jobs(self, mock_sleep, mock_get):
         """If one detail page fails, the others are still processed."""
-        from requests import HTTPError
         scraper = ReteInformaticaLavoroScraper(max_pages=1)
 
         mock_get.side_effect = [

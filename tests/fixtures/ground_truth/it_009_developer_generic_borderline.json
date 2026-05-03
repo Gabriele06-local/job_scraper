@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Sviluppatore Software",
+    "company_name": "Generic Solutions Srl",
+    "location_raw": "Firenze, Italia (Ibrido)",
+    "description": "Generic Solutions Srl cerca uno Sviluppatore Software da inserire nel team. Il candidato deve avere esperienza nello sviluppo web con le principali tecnologie front-end e back-end. Si richiede buona conoscenza di HTML, CSS e JavaScript, oltre a familiarità con PHP per lo sviluppo server-side. Esperienza richiesta nel settore. Modalità di lavoro ibrida tra sede di Firenze e remoto.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123464",
+    "posted_at": "2026-04-21T13:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "rejected_quality",
+    "expected_reject_reason": "UNKNOWN_SENIORITY",
+    "ai_output": {
+      "skills": ["HTML", "CSS", "JavaScript", "PHP"],
+      "category": "software_engineering",
+      "seniority": "unknown",
+      "role_family": "fullstack",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["it"],
+      "quality_flags": ["vague"],
+      "confidence": 0.61
+    }
+  }
+}

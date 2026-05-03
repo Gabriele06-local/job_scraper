@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Junior Frontend Developer React",
+    "company_name": "StartupXYZ",
+    "location_raw": "Berlin, Germany (Hybrid)",
+    "description": "StartupXYZ is a Berlin-based early-stage startup building tools for remote teams. We are looking for a Junior Frontend Developer with React experience to join our small but growing engineering team. This is a great opportunity for a developer at the start of their career who wants to work in a fast-paced startup environment with real ownership of features. What you'll do: build and maintain UI components in React, implement features based on design mockups, write clean JavaScript following team coding standards, style components with HTML and CSS, manage code with Git including branching and pull request workflows, participate in daily standups and sprint planning. What we're looking for: approximately 1 year of professional or project experience with React, solid understanding of JavaScript fundamentals, good command of HTML and CSS for layout and styling, basic Git workflow (commits, branches, pull requests), eagerness to learn and grow in a startup environment. We offer a hybrid working model with 2 days per week in our Berlin office, the rest remote. No salary information disclosed at this stage.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234573",
+    "posted_at": "2026-04-21T11:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["React", "JavaScript", "HTML", "CSS", "Git"],
+      "category": "software_engineering",
+      "seniority": "junior",
+      "role_family": "frontend",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["en"],
+      "quality_flags": ["has_requirements"],
+      "confidence": 0.73
+    }
+  }
+}

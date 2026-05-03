@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "UI/UX Designer",
+    "company_name": "Studio Creativo Srl",
+    "location_raw": "Italia (Remoto)",
+    "description": "Studio Creativo Srl, studio di design digitale con clienti internazionali, ricerca un UI/UX Designer da inserire nel team in modalità completamente remota. Il candidato si occuperà della progettazione di interfacce utente per prodotti digitali web e mobile, dalla ricerca utente fino al design system. Requisiti: Figma come strumento principale per wireframing, mockup e prototipazione interattiva, Adobe XD per consegne a cliente, Sketch per progetti legacy, costruzione e manutenzione di Design System componenti, buona conoscenza di HTML e CSS per la comunicazione con i developer e la verifica dell'implementazione, conduzione di sessioni di User Research (interviste, usability test), capacità di creare prototipi ad alta fedeltà e di argomentare le scelte di design con dati. Almeno 3 anni di esperienza in ruoli di UI/UX design per prodotti digitali. Ottima padronanza della comunicazione visiva e dell'accessibilità (WCAG). Offriamo: lavoro completamente remoto, RAL 40.000 - 55.000 EUR, flessibilità oraria, hardware di qualità, accesso a licenze software.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123462",
+    "posted_at": "2026-04-21T11:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Figma", "Adobe XD", "Sketch", "HTML", "CSS", "Design Systems", "User Research", "Prototyping"],
+      "category": "design",
+      "seniority": "mid",
+      "role_family": "design",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 40000,
+      "salary_max": 55000,
+      "currency": "EUR",
+      "languages_required": ["it"],
+      "quality_flags": ["has_requirements"],
+      "confidence": 0.78
+    }
+  }
+}

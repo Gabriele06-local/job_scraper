@@ -1,0 +1,27 @@
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+# Legacy files — pre-existing issues not introduced by this task.
+# New files (models/, ai/classifier.py, database/repository.py,
+# utils/logging.py, config.py, tests/test_base_infra.py) get full coverage.
+[lint.per-file-ignores]
+"scrapers/*.py" = ["E722", "F401", "I001", "E501", "W291", "W293"]
+"main.py" = ["F401", "I001", "E501", "W291", "W293"]
+"utils/description_fetcher.py" = ["F401", "I001", "E501", "W291", "W293"]
+"utils/deduplicator.py" = ["I001", "E501", "W291", "W293"]
+"utils/geocoding.py" = ["I001", "E501", "W291", "W293"]
+"verify_linkedin_import.py" = ["F401", "I001", "E501", "W291", "W293"]
+"verify_connection.py" = ["F401", "I001", "E501", "W291", "W293"]
+"fix_dates.py" = ["F401", "I001", "E501", "W291", "W293"]
+"fix_cities.py" = ["F401", "I001", "E501", "W291", "W293"]
+"database/mongo_client.py" = ["I001", "E501", "W291", "W293"]
+"ai/categorizer.py" = ["I001", "E501", "W291", "W293"]
+"tests/reproduce_issue.py" = ["I001", "E501", "W291", "W293"]
+"tests/test_description_processing.py" = ["I001", "E501", "W291", "W293"]
+"tests/test_reteinformaticalavoro_scraper.py" = ["I001", "E501", "W291", "W293"]
+"tests/test_flow.py" = ["I001", "E501", "W291", "W293"]
+"tests/test_unit.py" = ["I001", "E501", "W291", "W293"]
+"scripts/*.py" = ["F401", "I001", "E501", "W291", "W293"]

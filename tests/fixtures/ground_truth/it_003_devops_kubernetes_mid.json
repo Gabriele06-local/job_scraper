@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "DevOps Engineer Kubernetes",
+    "company_name": "InfraTech Srl",
+    "location_raw": "Roma, Italia (Ibrido)",
+    "description": "InfraTech Srl è alla ricerca di un DevOps Engineer con esperienza su Kubernetes per il proprio team di infrastruttura. Il ruolo prevede la gestione e il miglioramento continuo della nostra piattaforma cloud, garantendo alta disponibilità e scalabilità dei servizi. Il candidato ideale ha almeno 3 anni di esperienza nel settore DevOps/Cloud e una profonda conoscenza di Kubernetes per l'orchestrazione dei container. Competenze richieste: Kubernetes (amministrazione cluster, Helm charts, network policies), Terraform per l'infrastruttura come codice, pipeline CI/CD con Jenkins e GitLab, AWS come provider cloud principale, Docker per la containerizzazione, ottima conoscenza di Linux e scripting Bash. Modalità di lavoro: ibrido con 3 giorni in ufficio a Roma e 2 giorni da remoto. Contratto a tempo indeterminato, ticket restaurant, ambiente tecnico stimolante.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123458",
+    "posted_at": "2026-04-20T12:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Kubernetes", "Terraform", "AWS", "Docker", "Jenkins", "CI/CD", "Linux", "Bash"],
+      "category": "infrastructure",
+      "seniority": "mid",
+      "role_family": "devops",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["it"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.85
+    }
+  }
+}

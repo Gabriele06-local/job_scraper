@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Data Engineer (dbt + BigQuery)",
+    "company_name": "Analytics Co",
+    "location_raw": "Remote (US)",
+    "description": "Analytics Co is a data-first company helping mid-market businesses turn raw data into actionable insights. We are looking for a Data Engineer with hands-on experience in dbt and BigQuery to join our data platform team in a fully remote capacity. In this role, you will design, build, and optimize the data pipelines and transformation layers that fuel our analytics products and customer-facing dashboards. What you'll do: build and maintain dbt models for data transformation and documentation within our BigQuery data warehouse, write complex SQL queries for data aggregation, joins, and performance optimization, develop Python scripts and Airflow DAGs to orchestrate ingestion and transformation workflows, integrate data from various sources (APIs, databases, SaaS tools) into our GCP data ecosystem, collaborate with data analysts and product teams to model data according to business requirements, work with Looker for semantic layer definitions and dashboard queries. Requirements: 3+ years of experience in a data engineering role, strong command of dbt (Core or Cloud) for transformation and testing, BigQuery or equivalent cloud data warehouse (Redshift, Snowflake), advanced SQL skills and data modeling principles, Python for scripting and pipeline automation, Apache Airflow for workflow orchestration, familiarity with GCP services, experience with Looker or similar BI tools a plus. Fully remote, US-based. Salary: USD 95,000 - 120,000 per year.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234571",
+    "posted_at": "2026-04-21T09:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["dbt", "BigQuery", "SQL", "Python", "Airflow", "Looker", "GCP", "data modeling"],
+      "category": "data_engineering",
+      "seniority": "mid",
+      "role_family": "data",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 95000,
+      "salary_max": 120000,
+      "currency": "USD",
+      "languages_required": ["en"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack"],
+      "confidence": 0.89
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Ingeniero DevOps Docker + CI/CD",
+    "company_name": "Infraestructura Cloud SL",
+    "location_raw": "Barcelona (Híbrido)",
+    "description": "Infraestructura Cloud SL busca un Ingeniero DevOps con experiencia en contenedores y automatización de pipelines CI/CD. El rol implica gestionar entornos Docker y Kubernetes, configurar y mantener pipelines con GitLab CI, aprovisionar infraestructura en AWS usando Terraform, y administrar sistemas Linux. También se requiere experiencia en scripting con Python y Bash para automatizar tareas operativas. Mínimo 3 años de experiencia en roles DevOps o SRE. Ofrecemos modalidad híbrida con presencia en Barcelona 2 días a la semana. No se especifica salario en la oferta, negociable según perfil.",
+    "detected_language": "es",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/es/54323",
+    "posted_at": "2026-04-22T12:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Docker", "Kubernetes", "GitLab CI", "AWS", "Terraform", "Linux", "Python", "Bash"],
+      "category": "devops",
+      "seniority": "mid",
+      "role_family": "devops",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["es"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.84
+    }
+  }
+}

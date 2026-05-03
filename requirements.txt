@@ -13,3 +13,14 @@ pytest-mock
 markdownify
 feedparser
 pytz
+# new deps — upgrade work
+groq
+pydantic>=2.0
+pydantic-settings
+lingua-language-detector
+rapidfuzz
+mongomock
+structlog
+httpx
+tenacity
+ruff

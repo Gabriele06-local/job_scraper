@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "IT Allrounder",
+    "company_name": "Mittelstand GmbH",
+    "location_raw": "München (Büro)",
+    "description": "Wir suchen ab sofort einen IT Allrounder für unsere Niederlassung in München. Die genaue Stellenbeschreibung wird im Vorstellungsgespräch besprochen. Grundsätzlich suchen wir jemanden mit allgemeinen IT Kenntnissen, Erfahrung mit Windows und Office sowie Grundkenntnissen in Netzwerktechnik. Sie unterstützen das interne Team bei alltäglichen IT-Fragen und sind Ansprechpartner für technische Probleme im Büro. Vollzeitstelle, Büroarbeit in München. Gehalt nach Vereinbarung.",
+    "detected_language": "de",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/de/61003",
+    "posted_at": "2026-04-21T14:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "rejected_quality",
+    "expected_reject_reason": "INSUFFICIENT_SKILLS",
+    "ai_output": {
+      "skills": ["Windows", "Office", "Networking"],
+      "category": "support",
+      "seniority": "unknown",
+      "role_family": "other",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["de"],
+      "quality_flags": ["vague", "boilerplate"],
+      "confidence": 0.55
+    }
+  }
+}

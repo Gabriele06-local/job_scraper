@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Senior Backend Developer Node.js",
+    "company_name": "TechCorp España SL",
+    "location_raw": "España (100% Remoto)",
+    "description": "Buscamos un Senior Backend Developer con sólida experiencia en Node.js para unirse a nuestro equipo de ingeniería distribuido. Trabajarás diseñando y desarrollando microservicios escalables usando Node.js y Express, con almacenamiento en MongoDB y caché con Redis. Gestionarás despliegues en contenedores Docker y orquestación en AWS (ECS, Lambda, S3). Requisitos: mínimo 5 años de experiencia en desarrollo backend, dominio de Node.js, Express, MongoDB, Redis, Docker y AWS. Se valorará experiencia con Jest para testing y diseño de REST APIs. Posición 100% remota desde España. Salario entre 55.000 y 75.000 EUR anuales según experiencia.",
+    "detected_language": "es",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/es/54321",
+    "posted_at": "2026-04-22T10:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Node.js", "Express", "MongoDB", "Redis", "Docker", "AWS", "REST API", "Jest"],
+      "category": "backend",
+      "seniority": "senior",
+      "role_family": "backend",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 55000,
+      "salary_max": 75000,
+      "currency": "EUR",
+      "languages_required": ["es"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack"],
+      "confidence": 0.87
+    }
+  }
+}
