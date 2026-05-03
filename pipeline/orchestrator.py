@@ -149,7 +149,7 @@ class ImportPipeline:
             c.ai_unavailable += 1
             job.status = JobStatus.REJECTED_QUALITY
             job.reject_reason = QualityRejectReason.AI_UNAVAILABLE.value
-            job.quality = JobQuality(quality_score=0.0)
+            job.quality = JobQuality(quality_score=0)
         else:
             c.ai_classified += 1
             job.classification = classification

@@ -27,6 +27,7 @@ from tenacity import (
 
 from config import settings
 from models.job import (
+    Category,
     EmploymentType,
     JobClassification,
     RemoteMode,
@@ -52,7 +53,14 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
     ],
     "properties": {
         "skills": {"type": "array", "items": {"type": "string"}, "maxItems": 30},
-        "category": {"type": "string"},
+        "category": {
+            "type": ["string", "null"],
+            "enum": [
+                "software-engineering", "devops-sysadmin", "data-ml", "design",
+                "product-management", "engineering-management", "security",
+                "qa-testing", "mobile", "other-it", None,
+            ],
+        },
         "seniority": {
             "type": "string",
             "enum": ["junior", "mid", "senior", "lead", "principal", "unknown"],
@@ -150,7 +158,7 @@ class _GroqOutput(BaseModel):
     """
 
     skills: list[str] = []
-    category: str | None = None
+    category: Category | None = None
     seniority: Seniority = Seniority.UNKNOWN
     role_family: RoleFamily = RoleFamily.OTHER
     employment_type: EmploymentType = EmploymentType.UNKNOWN
@@ -161,6 +169,15 @@ class _GroqOutput(BaseModel):
     languages_required: list[str] = []
     quality_flags: list[str] = []
     confidence: float = 0.0
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def coerce_category(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str) and v not in {e.value for e in Category}:
+            return None
+        return v
 
     @field_validator("seniority", mode="before")
     @classmethod

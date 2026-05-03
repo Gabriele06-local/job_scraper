@@ -5,6 +5,7 @@ Rules (SPEC 02 §3): all must pass, first failure short-circuits.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from urllib.parse import urlparse
 
@@ -21,12 +22,14 @@ _SUPPORTED_LANGUAGES = {
 
 _INVALID_COMPANY_NAMES = {"", "unknown", "n/a", "none"}
 
-MIN_DESCRIPTION_LEN = 200
+MIN_DESCRIPTION_LEN = 150
+MAX_AGE_DAYS = 60
 
 
 class RejectReason(str, Enum):
     DESCRIPTION_TOO_SHORT = "DESCRIPTION_TOO_SHORT"
     MISSING_REQUIRED_FIELDS = "MISSING_REQUIRED_FIELDS"
+    EXPIRED_LISTING = "EXPIRED_LISTING"
     LANGUAGE_NOT_SUPPORTED = "LANGUAGE_NOT_SUPPORTED"
     SUSPECTED_SPAM = "SUSPECTED_SPAM"
     OTHER = "OTHER"
@@ -69,6 +72,14 @@ def _check(job_raw: RawJob) -> str:
     # Missing posted_at
     if job_raw.posted_at is None:
         return RejectReason.MISSING_REQUIRED_FIELDS.value
+
+    # Listing too old
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=MAX_AGE_DAYS)
+    posted = job_raw.posted_at
+    if posted.tzinfo is None:
+        posted = posted.replace(tzinfo=timezone.utc)
+    if posted < cutoff:
+        return RejectReason.EXPIRED_LISTING.value
 
     # Description too short
     if len(job_raw.description) < MIN_DESCRIPTION_LEN:

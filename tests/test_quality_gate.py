@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from models.job import (
+    EmploymentType,
     Job,
     JobClassification,
     JobCompany,
@@ -41,6 +42,7 @@ def _cls(**kwargs) -> JobClassification:
         seniority=Seniority.SENIOR,
         role_family=RoleFamily.BACKEND,
         remote_mode=RemoteMode.REMOTE,
+        employment_type=EmploymentType.FULL_TIME,
         salary_min=None,
         salary_max=None,
         currency=None,
@@ -168,21 +170,29 @@ class TestPassesQualityGate:
         assert not ok
         assert reasons == [QualityRejectReason.UNKNOWN_ROLE_FAMILY.value]
 
-    def test_no_salary_no_remote_rejected(self):
-        cl = _cls(salary_min=None, salary_max=None, remote_mode=RemoteMode.ONSITE)
+    def test_unknown_remote_mode_rejected(self):
+        cl = _cls(remote_mode=RemoteMode.UNKNOWN)
         ok, reasons = passes_quality_gate(cl)
         assert not ok
-        assert reasons == [QualityRejectReason.NO_SALARY_AND_NO_REMOTE_MODE.value]
+        assert reasons == [QualityRejectReason.UNKNOWN_REMOTE_MODE.value]
 
-    def test_no_salary_but_hybrid_passes(self):
-        cl = _cls(salary_min=None, salary_max=None, remote_mode=RemoteMode.HYBRID)
+    def test_onsite_no_salary_passes(self):
+        cl = _cls(salary_min=None, salary_max=None, remote_mode=RemoteMode.ONSITE)
         ok, _ = passes_quality_gate(cl)
         assert ok is True
 
-    def test_no_salary_but_remote_passes(self):
-        cl = _cls(salary_min=None, salary_max=None, remote_mode=RemoteMode.REMOTE)
-        ok, _ = passes_quality_gate(cl)
-        assert ok is True
+    def test_unknown_employment_type_rejected(self):
+        cl = _cls(employment_type=EmploymentType.UNKNOWN)
+        ok, reasons = passes_quality_gate(cl)
+        assert not ok
+        assert reasons == [QualityRejectReason.UNKNOWN_EMPLOYMENT_TYPE.value]
+
+    def test_remote_mode_ordering_before_employment_type(self):
+        """UNKNOWN_REMOTE_MODE fires before UNKNOWN_EMPLOYMENT_TYPE (first-match order)."""
+        cl = _cls(remote_mode=RemoteMode.UNKNOWN, employment_type=EmploymentType.UNKNOWN)
+        ok, reasons = passes_quality_gate(cl)
+        assert not ok
+        assert reasons == [QualityRejectReason.UNKNOWN_REMOTE_MODE.value]
 
     def test_low_confidence_rejected(self):
         cl = _cls(ai_confidence=0.6)
@@ -321,13 +331,17 @@ class TestEvaluate:
         cl = _cls(technical_skills=[])
         job = _job(cl)
         result = evaluate(job)
-        # Score is set (>= 0); other components (remote, confidence) contribute even with 0 skills
-        assert 0.0 <= result.quality.quality_score <= 1.0
+        assert 0 <= result.quality.quality_score <= 100
 
     def test_quality_score_set_on_valid(self):
         job = _job()
         result = evaluate(job)
-        assert 0.0 < result.quality.quality_score <= 1.0
+        assert 0 < result.quality.quality_score <= 100
+
+    def test_quality_score_is_int(self):
+        job = _job()
+        result = evaluate(job)
+        assert isinstance(result.quality.quality_score, int)
 
     def test_evaluate_returns_same_job_object(self):
         job = _job()
@@ -369,6 +383,7 @@ class TestQualityGateGroundTruth:
                 seniority=ai_out.get("seniority", "unknown"),
                 role_family=ai_out.get("role_family", "other"),
                 remote_mode=ai_out.get("remote_mode", "unknown"),
+                employment_type=ai_out.get("employment_type", "full_time"),
                 salary_min=ai_out.get("salary_min"),
                 salary_max=ai_out.get("salary_max"),
                 ai_confidence=ai_out.get("confidence", 0.0),
@@ -398,6 +413,7 @@ class TestQualityGateGroundTruth:
                 seniority=ai_out.get("seniority", "unknown"),
                 role_family=ai_out.get("role_family", "other"),
                 remote_mode=ai_out.get("remote_mode", "unknown"),
+                employment_type=ai_out.get("employment_type", "full_time"),
                 salary_min=ai_out.get("salary_min"),
                 salary_max=ai_out.get("salary_max"),
                 ai_confidence=ai_out.get("confidence", 0.0),
@@ -435,6 +451,7 @@ class TestQualityGateGroundTruth:
                 seniority=ai_out.get("seniority", "unknown"),
                 role_family=ai_out.get("role_family", "other"),
                 remote_mode=ai_out.get("remote_mode", "unknown"),
+                employment_type=ai_out.get("employment_type", "full_time"),
                 salary_min=ai_out.get("salary_min"),
                 salary_max=ai_out.get("salary_max"),
                 ai_confidence=ai_out.get("confidence", 0.0),

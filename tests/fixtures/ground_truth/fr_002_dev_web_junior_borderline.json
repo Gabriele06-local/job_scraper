@@ -11,10 +11,16 @@
   },
   "expected_output": {
     "should_pass_prefilter": true,
-    "expected_status": "rejected_quality",
-    "expected_reject_reason": "NO_SALARY_AND_NO_REMOTE_MODE",
+    "expected_status": "valid",
+    "expected_reject_reason": null,
     "ai_output": {
-      "skills": ["HTML", "CSS", "JavaScript", "jQuery", "PHP"],
+      "skills": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "jQuery",
+        "PHP"
+      ],
       "category": "frontend",
       "seniority": "junior",
       "role_family": "frontend",
@@ -23,8 +29,12 @@
       "salary_min": null,
       "salary_max": null,
       "currency": null,
-      "languages_required": ["fr"],
-      "quality_flags": ["has_requirements"],
+      "languages_required": [
+        "fr"
+      ],
+      "quality_flags": [
+        "has_requirements"
+      ],
       "confidence": 0.74
     }
   }
