@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
     jooble_api_key: str = ""
-    linkedin_max_results: int = 25
 
     # Search config — override via comma-separated env vars
     scrape_languages: list[str] = ["it", "en", "es", "fr", "de"]
