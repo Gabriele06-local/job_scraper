@@ -101,6 +101,14 @@ def cmd_import(args: argparse.Namespace) -> int:
 
     connectors = get_enabled_connectors()
 
+    # Optional --connectors filter (comma-separated names)
+    only_names: set[str] = set()
+    if getattr(args, "connectors", None):
+        only_names = {n.strip().lower() for n in args.connectors.split(",") if n.strip()}
+    if only_names:
+        connectors = [c for c in connectors if c.source_name.lower() in only_names]
+        log.info("cli.import.connector_filter", selected=sorted(only_names))
+
     # Inject Adzuna daily budget now that DB is ready.
     for connector in connectors:
         if isinstance(connector, AdzunaConnector):
@@ -309,6 +317,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="Max normalized jobs per connector (0=all)",
+    )
+    p_import.add_argument(
+        "--connectors",
+        type=str,
+        default="",
+        help="Comma-separated connector names to include (default: all enabled)",
     )
 
     # expire
