@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import structlog
 
@@ -30,6 +30,7 @@ class RejectReason(str, Enum):
     DESCRIPTION_TOO_SHORT = "DESCRIPTION_TOO_SHORT"
     MISSING_REQUIRED_FIELDS = "MISSING_REQUIRED_FIELDS"
     EXPIRED_LISTING = "EXPIRED_LISTING"
+    CLOSED_LISTING = "CLOSED_LISTING"
     LANGUAGE_NOT_SUPPORTED = "LANGUAGE_NOT_SUPPORTED"
     SUSPECTED_SPAM = "SUSPECTED_SPAM"
     OTHER = "OTHER"
@@ -68,6 +69,10 @@ def _check(job_raw: RawJob) -> str:
     # Invalid URL
     if not _is_valid_url(job_raw.url):
         return RejectReason.MISSING_REQUIRED_FIELDS.value
+
+    # Closed listing (e.g. Jooble closedJob=True param)
+    if _is_closed_listing_url(job_raw.url):
+        return RejectReason.CLOSED_LISTING.value
 
     # Missing posted_at
     if job_raw.posted_at is None:
@@ -127,3 +132,12 @@ def _is_suspected_spam(job_raw: RawJob) -> bool:
     if len(words) < 5:
         return False
     return job_raw.title == job_raw.title.upper() and any(c.isalpha() for c in job_raw.title)
+
+
+def _is_closed_listing_url(url: str) -> bool:
+    """Return True if the URL signals a closed/unavailable listing."""
+    try:
+        params = parse_qs(urlparse(url).query)
+        return params.get("closedJob", [""])[0].lower() == "true"
+    except Exception:
+        return False
