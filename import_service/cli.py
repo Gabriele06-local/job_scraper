@@ -101,31 +101,57 @@ def cmd_import(args: argparse.Namespace) -> int:
 
     connectors = get_enabled_connectors()
 
+    # Optional --connectors filter (comma-separated names)
+    only_names: set[str] = set()
+    if getattr(args, "connectors", None):
+        only_names = {n.strip().lower() for n in args.connectors.split(",") if n.strip()}
+    if only_names:
+        connectors = [c for c in connectors if c.source_name.lower() in only_names]
+        log.info("cli.import.connector_filter", selected=sorted(only_names))
+
     # Inject Adzuna daily budget now that DB is ready.
     for connector in connectors:
         if isinstance(connector, AdzunaConnector):
             connector.set_budget(DailyBudget(db, "adzuna"))
 
-    log.info("cli.import.start", connectors=len(connectors), dry_run=args.dry_run)
+    limit_per = getattr(args, "limit_per_connector", 0) or 0
+    log.info(
+        "cli.import.start",
+        connectors=len(connectors),
+        dry_run=args.dry_run,
+        limit_per_connector=limit_per or "all",
+    )
 
     all_raw = []
     for connector in connectors:
         name = connector.source_name
         started_at = datetime.now(tz=timezone.utc)
         fetched = 0
+        normalized = 0
         run_status: str = "success"
         error_msg: str | None = None
+        log.info("connector.fetch_start", connector=name)
         try:
             for raw_dict in connector.fetch():
                 fetched += 1
                 raw_job = _dict_to_raw_job(raw_dict)
                 if raw_job is not None:
                     all_raw.append(raw_job)
+                    normalized += 1
+                    if limit_per and normalized >= limit_per:
+                        break
         except Exception as exc:
             run_status = "failed"
             error_msg = str(exc)
             log.error("cli.import.connector_error", connector=name, error=exc)
         finally:
+            log.info(
+                "connector.fetch_done",
+                connector=name,
+                fetched_raw=fetched,
+                normalized=normalized,
+                status=run_status,
+            )
             if not args.dry_run:
                 record = ImportRunRecord(
                     provider_name=name,
@@ -286,6 +312,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_import = sub.add_parser("import", help="Run full fetch + classify + persist pipeline")
     p_import.add_argument("--dry-run", action="store_true", help="Skip all DB writes")
     p_import.add_argument("--limit", type=int, default=0, help="Max jobs to process (0=all)")
+    p_import.add_argument(
+        "--limit-per-connector",
+        type=int,
+        default=0,
+        help="Max normalized jobs per connector (0=all)",
+    )
+    p_import.add_argument(
+        "--connectors",
+        type=str,
+        default="",
+        help="Comma-separated connector names to include (default: all enabled)",
+    )
 
     # expire
     p_expire = sub.add_parser("expire", help="Probe active job URLs, mark expired ones")
