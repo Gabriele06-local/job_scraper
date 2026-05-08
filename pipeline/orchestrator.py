@@ -69,6 +69,7 @@ class ImportPipeline:
 
     Args:
         jobs_col: MongoDB jobs collection (real or mongomock for tests).
+        companies_col: MongoDB companies collection for upsert/linking.
         classifier: GroqClassifier instance (injected for test mocking).
         dry_run: If True, skip all Mongo writes.
     """
@@ -76,10 +77,12 @@ class ImportPipeline:
     def __init__(
         self,
         jobs_col: Collection,  # type: ignore[type-arg]
+        companies_col: Collection,  # type: ignore[type-arg]
         classifier: Optional[GroqClassifier] = None,
         dry_run: bool = False,
     ) -> None:
         self._jobs_col = jobs_col
+        self._companies_col = companies_col
         self._classifier = classifier or GroqClassifier()
         self._dry_run = dry_run
 
@@ -198,7 +201,14 @@ class ImportPipeline:
                     reason=job.reject_reason,
                 )
 
-        # Stage 5: Persist
+        # Stage 5: Company upsert — link job to companies collection
+        if not self._dry_run:
+            company_id = self._upsert_company(job)
+            if company_id:
+                job.company.id = company_id
+                logger.debug("job.company_linked", company=job.company.name, company_id=company_id)
+
+        # Stage 6: Persist
         if self._dry_run:
             c.dry_run_skipped += 1
             logger.debug("job.dry_run_skip", title=raw.title[:80])
@@ -265,6 +275,39 @@ class ImportPipeline:
             self._jobs_col.insert_one(job.to_mongo_doc())
         except pymongo.errors.DuplicateKeyError:
             pass  # Race: another process beat us — safe to ignore
+
+    def _upsert_company(self, job: Job) -> str | None:
+        """Upsert company by name_normalized, return str(_id).
+
+        Uses $setOnInsert so backend-managed fields (trustScore, logo, etc.)
+        are never overwritten by the scraper.
+        """
+        from pymongo import ReturnDocument
+
+        now = datetime.now(tz=timezone.utc)
+        try:
+            result = self._companies_col.find_one_and_update(
+                {"name_normalized": job.company.name_normalized},
+                {
+                    "$setOnInsert": {
+                        "name": job.company.name,
+                        "name_normalized": job.company.name_normalized,
+                        "trustScore": 80.0,
+                        "totalRatings": 0,
+                        "totalLikes": 0,
+                        "totalDislikes": 0,
+                        "created_at": now,
+                    },
+                    "$set": {"updated_at": now},
+                },
+                upsert=True,
+                return_document=ReturnDocument.AFTER,
+                projection={"_id": 1},
+            )
+            return str(result["_id"]) if result else None
+        except Exception as exc:
+            logger.warning("pipeline.company_upsert_error", company=job.company.name, error=str(exc))
+            return None
 
     def _persist(self, job: Job) -> None:
         """Upsert job to MongoDB by dedup_hash (idempotent)."""

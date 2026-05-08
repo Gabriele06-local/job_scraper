@@ -222,9 +222,9 @@ def test_job_to_mongo_doc_location_with_geo():
         )
     )
     doc = job.to_mongo_doc()
-    assert doc["location"]["city"] == "Milan"
-    assert doc["location"]["geo"]["type"] == "Point"
-    assert doc["location"]["geo"]["coordinates"] == [9.19, 45.46]
+    assert doc["city"] == "Milan"
+    assert doc["location_geo"]["type"] == "Point"
+    assert doc["location_geo"]["coordinates"] == [9.19, 45.46]
 
 
 def test_job_to_mongo_doc_salary_from_classification():

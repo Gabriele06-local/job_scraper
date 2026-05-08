@@ -79,16 +79,22 @@ def _premium_classification() -> JobClassification:
 
 def _make_pipeline(
     jobs_collection,
+    companies_collection=None,
     classification: JobClassification | None = None,
     dry_run: bool = False,
 ) -> ImportPipeline:
     """Build ImportPipeline with a mock classifier returning fixed classification."""
+    import mongomock
+
     mock_clf = MagicMock()
     mock_clf.classify.return_value = (
         classification if classification is not None else _good_classification()
     )
+    if companies_collection is None:
+        companies_collection = mongomock.MongoClient()["itjobhub"]["companies"]
     return ImportPipeline(
         jobs_col=jobs_collection,
+        companies_col=companies_collection,
         classifier=mock_clf,
         dry_run=dry_run,
     )
@@ -203,12 +209,13 @@ class TestPipelineDedupe:
 
 
 class TestPipelineAIUnavailable:
-    def test_ai_unavailable_rejected_quality(self, jobs_collection):
+    def test_ai_unavailable_rejected_quality(self, jobs_collection, companies_collection):
         mock_clf = MagicMock()
         mock_clf.classify.return_value = None  # simulate total failure
 
         pipeline = ImportPipeline(
             jobs_col=jobs_collection,
+            companies_col=companies_collection,
             classifier=mock_clf,
             dry_run=False,
         )
@@ -220,11 +227,15 @@ class TestPipelineAIUnavailable:
         assert doc["status"] == "rejected_quality"
         assert doc["reject_reason"] == "AI_UNAVAILABLE"
 
-    def test_ai_unavailable_counts_correctly(self, jobs_collection):
+    def test_ai_unavailable_counts_correctly(self, jobs_collection, companies_collection):
         mock_clf = MagicMock()
         mock_clf.classify.return_value = None
 
-        pipeline = ImportPipeline(jobs_col=jobs_collection, classifier=mock_clf)
+        pipeline = ImportPipeline(
+            jobs_col=jobs_collection,
+            companies_col=companies_collection,
+            classifier=mock_clf,
+        )
         result = pipeline.run([
             _raw(url="https://a.com/1"),
             _raw(url="https://a.com/2", title="Other Dev"),
@@ -276,7 +287,7 @@ class TestPipelineQualityGate:
 
 
 class TestPipelineErrorResilience:
-    def test_unexpected_error_continues_to_next_job(self, jobs_collection):
+    def test_unexpected_error_continues_to_next_job(self, jobs_collection, companies_collection):
         mock_clf = MagicMock()
         call_count = 0
 
@@ -289,7 +300,11 @@ class TestPipelineErrorResilience:
 
         mock_clf.classify.side_effect = side_effect
 
-        pipeline = ImportPipeline(jobs_col=jobs_collection, classifier=mock_clf)
+        pipeline = ImportPipeline(
+            jobs_col=jobs_collection,
+            companies_col=companies_collection,
+            classifier=mock_clf,
+        )
         result = pipeline.run([
             _raw(url="https://jobs.example.com/1"),
             _raw(url="https://jobs.example.com/2", title="Backend Dev 2"),
@@ -313,7 +328,7 @@ class TestPipelineErrorResilience:
 
 class TestPipelineGroundTruth:
     def test_all_non_prefilter_fixtures_classified(
-        self, ground_truth_pass, mock_groq_client, jobs_collection
+        self, ground_truth_pass, mock_groq_client, jobs_collection, companies_collection
     ):
         """All valid/premium fixtures must result in persisted jobs."""
         from datetime import datetime, timezone
@@ -323,7 +338,11 @@ class TestPipelineGroundTruth:
 
         clf = GroqClassifier(client=mock_groq_client)
         clf._rate_limiter._min_interval = 0.0
-        pipeline = ImportPipeline(jobs_col=jobs_collection, classifier=clf)
+        pipeline = ImportPipeline(
+            jobs_col=jobs_collection,
+            companies_col=companies_collection,
+            classifier=clf,
+        )
 
         raw_jobs = []
         for f in ground_truth_pass:
@@ -343,3 +362,52 @@ class TestPipelineGroundTruth:
         assert result.counters.ai_classified == len(raw_jobs)
         assert result.counters.ai_unavailable == 0
         assert result.counters.persisted + result.counters.gate_rejected >= len(raw_jobs)
+
+
+# ---------------------------------------------------------------------------
+# Company upsert / linking
+# ---------------------------------------------------------------------------
+
+
+class TestCompanyLinking:
+    def test_company_created_in_companies_collection(self, jobs_collection, companies_collection):
+        pipeline = _make_pipeline(jobs_collection, companies_collection)
+        pipeline.run([_raw(company_name="Acme Corp")])
+
+        assert companies_collection.count_documents({}) == 1
+        doc = companies_collection.find_one({})
+        assert doc["name"] == "Acme Corp"
+        assert doc["name_normalized"] == "acme corp"
+
+    def test_job_has_company_id_set(self, jobs_collection, companies_collection):
+        pipeline = _make_pipeline(jobs_collection, companies_collection)
+        pipeline.run([_raw(company_name="Acme Corp")])
+
+        job_doc = jobs_collection.find_one({})
+        assert job_doc is not None
+        assert job_doc.get("company_id") is not None
+        assert job_doc["company"]["name"] == "Acme Corp"
+
+    def test_same_company_not_duplicated(self, jobs_collection, companies_collection):
+        pipeline = _make_pipeline(jobs_collection, companies_collection)
+        pipeline.run([
+            _raw(url="https://jobs.example.com/1", company_name="Acme Corp"),
+            _raw(url="https://jobs.example.com/2", title="Backend Dev 2", company_name="acme CORP"),
+        ])
+
+        assert companies_collection.count_documents({}) == 1
+
+    def test_company_id_matches_company_doc(self, jobs_collection, companies_collection):
+        pipeline = _make_pipeline(jobs_collection, companies_collection)
+        pipeline.run([_raw(company_name="Acme Corp")])
+
+        company = companies_collection.find_one({})
+        job = jobs_collection.find_one({"status": {"$in": ["valid", "premium"]}})
+        assert job is not None
+        assert str(job["company_id"]) == str(company["_id"])
+
+    def test_dry_run_no_company_created(self, jobs_collection, companies_collection):
+        pipeline = _make_pipeline(jobs_collection, companies_collection, dry_run=True)
+        pipeline.run([_raw(company_name="Acme Corp")])
+
+        assert companies_collection.count_documents({}) == 0

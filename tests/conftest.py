@@ -86,6 +86,14 @@ def jobs_collection(mongo_db):
     return col
 
 
+@pytest.fixture
+def companies_collection(mongo_db):
+    """Empty companies collection for pipeline tests."""
+    col = mongo_db["companies"]
+    col.drop()
+    return col
+
+
 # ---------------------------------------------------------------------------
 # Groq client mock — returns fixture ai_output deterministically
 # ---------------------------------------------------------------------------

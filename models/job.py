@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+from bson import ObjectId
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
@@ -270,6 +272,8 @@ class Job(BaseModel):
             "source": self.source_info.source,
             "external_id": self.source_info.external_id,
             "dedup_hash": self.dedup_hash,
+            # Prisma FK — written as ObjectId so Prisma @db.ObjectId reads it correctly
+            "company_id": ObjectId(self.company.id) if self.company.id else None,
             # Content
             "title": self.content.title,
             "title_normalized": self.content.title_normalized,
@@ -294,21 +298,21 @@ class Job(BaseModel):
                 "logo": self.company.logo,
                 "id": self.company.id,
             },
-            # Location (nested)
-            "location": {
-                "raw": self.location.raw,
-                "formatted_address": self.location.formatted_address,
-                "city": self.location.city,
-                "country": self.location.country,
-                "geo": (
-                    {
-                        "type": self.location.geo.type,
-                        "coordinates": self.location.geo.coordinates,
-                    }
-                    if self.location.geo
-                    else None
-                ),
-            },
+            # Location — Prisma schema has `location String?`, write raw string
+            "location": self.location.raw,
+            # Flat location fields for scraper indexing (outside Prisma schema)
+            "location_raw": self.location.raw,
+            "city": self.location.city,
+            "country": self.location.country,
+            "formatted_address": self.location.formatted_address,
+            "location_geo": (
+                {
+                    "type": self.location.geo.type,
+                    "coordinates": self.location.geo.coordinates,
+                }
+                if self.location.geo
+                else None
+            ),
             # Classification (flattened)
             "remote": cl.remote,
             "remote_mode": cl.remote_mode.value,
@@ -352,8 +356,22 @@ class Job(BaseModel):
     def from_mongo_doc(cls, doc: dict[str, Any]) -> "Job":
         """Reconstruct a Job from a MongoDB document."""
         company_raw = doc.get("company") or {}
-        location_raw = doc.get("location") or {}
-        geo_raw = location_raw.get("geo")
+        # Handle both old nested format and new flat format (Prisma compat)
+        location_field = doc.get("location")
+        if isinstance(location_field, dict):
+            # Legacy nested format
+            location_str = location_field.get("raw")
+            city_val = location_field.get("city")
+            country_val = location_field.get("country")
+            formatted_val = location_field.get("formatted_address")
+            geo_raw = location_field.get("geo")
+        else:
+            # New flat format
+            location_str = location_field
+            city_val = doc.get("city")
+            country_val = doc.get("country")
+            formatted_val = doc.get("formatted_address")
+            geo_raw = doc.get("location_geo")
 
         geo: GeoPoint | None = None
         if geo_raw and geo_raw.get("coordinates"):
@@ -390,10 +408,10 @@ class Job(BaseModel):
                 id=str(company_raw["id"]) if company_raw.get("id") else None,
             ),
             location=JobLocation(
-                raw=location_raw.get("raw"),
-                formatted_address=location_raw.get("formatted_address"),
-                city=location_raw.get("city"),
-                country=location_raw.get("country"),
+                raw=location_str,
+                formatted_address=formatted_val,
+                city=city_val,
+                country=country_val,
                 geo=geo,
             ),
             salary=JobSalary(

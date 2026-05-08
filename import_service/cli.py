@@ -88,7 +88,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     """Full pipeline: fetch → normalize → pre-filter → AI classify → persist."""
     from connectors import get_enabled_connectors
     from connectors.adzuna import AdzunaConnector
-    from database.repository import get_db
+    from database.repository import get_companies, get_db
     from pipeline.budget import DailyBudget
     from pipeline.import_run import ImportRunRecord, ImportRunTracker
     from pipeline.orchestrator import ImportPipeline
@@ -96,7 +96,8 @@ def cmd_import(args: argparse.Namespace) -> int:
     ensure_indexes()
     db = get_db()
     jobs_col = get_jobs()
-    pipeline = ImportPipeline(jobs_col=jobs_col, dry_run=args.dry_run)
+    companies_col = get_companies()
+    pipeline = ImportPipeline(jobs_col=jobs_col, companies_col=companies_col, dry_run=args.dry_run)
     tracker = ImportRunTracker(db)
 
     connectors = get_enabled_connectors()
