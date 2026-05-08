@@ -76,8 +76,11 @@ def ensure_indexes() -> None:
 def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
     jobs = db["jobs"]
     indexes = [
-        IndexModel([("url", ASCENDING)], unique=True, name="url_unique"),
-        IndexModel([("dedup_hash", ASCENDING)], unique=True, name="dedup_hash_unique"),
+        # sparse=True so backend-managed docs (no url/dedup_hash field) are excluded
+        IndexModel([("url", ASCENDING)], unique=True, sparse=True, name="url_unique"),
+        IndexModel(
+            [("dedup_hash", ASCENDING)], unique=True, sparse=True, name="dedup_hash_unique"
+        ),
         IndexModel(
             [("status", ASCENDING), ("posted_at", DESCENDING)],
             name="status_posted_at",
@@ -110,10 +113,11 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
         ),
     ]
     try:
-        # Drop text_index if it exists with different options (e.g. missing language_override)
+        # Drop indexes that need option changes (sparse, language_override)
         existing = {idx["name"] for idx in jobs.list_indexes()}
-        if "text_index" in existing:
-            jobs.drop_index("text_index")
+        for name in ("url_unique", "dedup_hash_unique", "text_index"):
+            if name in existing:
+                jobs.drop_index(name)
         jobs.create_indexes(indexes)
         logger.info("mongo.jobs_indexes_created")
     except OperationFailure as e:
@@ -125,11 +129,19 @@ def _ensure_companies_indexes(db: Database) -> None:  # type: ignore[type-arg]
     companies = db["companies"]
     indexes = [
         IndexModel([("name", ASCENDING)], unique=True, name="name_unique"),
+        # sparse=True so Prisma-managed documents (no name_normalized field) are excluded
         IndexModel(
-            [("name_normalized", ASCENDING)], unique=True, name="name_normalized_unique"
+            [("name_normalized", ASCENDING)],
+            unique=True,
+            sparse=True,
+            name="name_normalized_unique",
         ),
     ]
     try:
+        # Drop and recreate name_normalized_unique if options changed (e.g. sparse)
+        existing = {idx["name"] for idx in companies.list_indexes()}
+        if "name_normalized_unique" in existing:
+            companies.drop_index("name_normalized_unique")
         companies.create_indexes(indexes)
         logger.info("mongo.companies_indexes_created")
     except OperationFailure as e:
