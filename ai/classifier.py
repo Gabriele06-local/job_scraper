@@ -384,6 +384,11 @@ class GroqClassifier:
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             latency_ms=latency_ms,
+            cost_usd=round(
+                tokens_in * _INPUT_PRICE_PER_1M / 1_000_000
+                + tokens_out * _OUTPUT_PRICE_PER_1M / 1_000_000,
+                6,
+            ),
         )
 
         raw_content = response.choices[0].message.content

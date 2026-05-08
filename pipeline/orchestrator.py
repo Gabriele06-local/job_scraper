@@ -120,10 +120,13 @@ class ImportPipeline:
     # ------------------------------------------------------------------
 
     def _process_one(self, raw: RawJob, c: PipelineCounters) -> None:
+        logger.debug("job.process", title=raw.title[:80], source=raw.source, url=raw.url)
+
         # Stage 1: Pre-filter
         passes, reason = should_send_to_ai(raw)
         if not passes:
             c.prefilter_rejected += 1
+            logger.debug("job.prefilter_rejected", title=raw.title[:80], reason=reason)
             if not self._dry_run:
                 self._persist_rejected_prefilter(raw, reason)
             return
@@ -133,6 +136,7 @@ class ImportPipeline:
         existing = find_existing_job(dedup_hash, self._jobs_col)
         if existing is not None:
             c.dedupe_hit += 1
+            logger.debug("job.dedupe_hit", title=raw.title[:80])
             if not self._dry_run:
                 merge_with_existing(existing, raw, self._jobs_col)
             return
@@ -140,9 +144,16 @@ class ImportPipeline:
         # Stage 2b: Fuzzy dedupe (flag only — don't skip, just count)
         if check_fuzzy_dup(raw, self._jobs_col):
             c.fuzzy_dup_flagged += 1
+            logger.debug("job.fuzzy_dup_flagged", title=raw.title[:80])
 
         # Stage 3: AI classification
         job = self._raw_to_job(raw, dedup_hash)
+        logger.info(
+            "job.ai_classify",
+            title=raw.title[:80],
+            source=raw.source,
+            desc_len=len(raw.description),
+        )
         classification = self._classifier.classify(self._to_classify_input(raw))
 
         if classification is None:
@@ -150,9 +161,20 @@ class ImportPipeline:
             job.status = JobStatus.REJECTED_QUALITY
             job.reject_reason = QualityRejectReason.AI_UNAVAILABLE.value
             job.quality = JobQuality(quality_score=0)
+            logger.warning("job.ai_unavailable", title=raw.title[:80], url=raw.url)
         else:
             c.ai_classified += 1
             job.classification = classification
+            logger.info(
+                "job.ai_result",
+                title=raw.title[:80],
+                category=str(classification.category),
+                seniority=str(classification.seniority),
+                role_family=str(classification.role_family),
+                remote_mode=str(classification.remote_mode),
+                confidence=round(classification.ai_confidence, 2),
+                skills=classification.technical_skills[:5],
+            )
             # Sync salary from classification to top-level JobSalary
             job.salary = JobSalary(
                 min=classification.salary_min,
@@ -164,17 +186,26 @@ class ImportPipeline:
             job = evaluate(job)
             if job.status == JobStatus.PREMIUM:
                 c.gate_premium += 1
+                logger.info("job.gate_pass", title=raw.title[:80], status="premium")
             elif job.status == JobStatus.VALID:
                 c.gate_valid += 1
+                logger.info("job.gate_pass", title=raw.title[:80], status="valid")
             else:
                 c.gate_rejected += 1
+                logger.info(
+                    "job.gate_rejected",
+                    title=raw.title[:80],
+                    reason=job.reject_reason,
+                )
 
         # Stage 5: Persist
         if self._dry_run:
             c.dry_run_skipped += 1
+            logger.debug("job.dry_run_skip", title=raw.title[:80])
         else:
             self._persist(job)
             c.persisted += 1
+            logger.debug("job.persisted", title=raw.title[:80], status=str(job.status))
 
     def _to_classify_input(self, raw: RawJob) -> dict:  # type: ignore[type-arg]
         """Build the dict expected by GroqClassifier.classify()."""
