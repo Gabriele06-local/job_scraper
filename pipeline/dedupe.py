@@ -82,7 +82,7 @@ def merge_with_existing(existing: Job, new_raw: RawJob, jobs_col: Collection) ->
     # Refresh the in-memory object to reflect update
     existing.last_seen_at = now
     existing.updated_at = now
-    if new_raw.posted_at and new_raw.posted_at < existing.posted_at:
+    if new_raw.posted_at and _utc(new_raw.posted_at) < _utc(existing.posted_at):
         existing.posted_at = new_raw.posted_at
 
     return existing

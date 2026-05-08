@@ -104,10 +104,16 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
         IndexModel(
             [("title", TEXT), ("description", TEXT)],
             weights={"title": 5, "description": 1},
+            default_language="english",
+            language_override="lang_override",  # non-existent field → always use default_language
             name="text_index",
         ),
     ]
     try:
+        # Drop text_index if it exists with different options (e.g. missing language_override)
+        existing = {idx["name"] for idx in jobs.list_indexes()}
+        if "text_index" in existing:
+            jobs.drop_index("text_index")
         jobs.create_indexes(indexes)
         logger.info("mongo.jobs_indexes_created")
     except OperationFailure as e:
