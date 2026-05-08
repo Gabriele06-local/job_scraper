@@ -1,316 +1,274 @@
 {
   "greenhouse": [
-    {"name": "Stripe", "slug": "stripe"},
-    {"name": "Figma", "slug": "figma"},
-    {"name": "Airbnb", "slug": "airbnb"},
-    {"name": "Dropbox", "slug": "dropbox"},
-    {"name": "Lyft", "slug": "lyft"},
-    {"name": "DoorDash", "slug": "doordash"},
-    {"name": "Brex", "slug": "brex"},
-    {"name": "Gusto", "slug": "gusto"},
-    {"name": "Plaid", "slug": "plaid"},
-    {"name": "Robinhood", "slug": "robinhood"},
-    {"name": "Coinbase", "slug": "coinbase"},
-    {"name": "Rippling", "slug": "rippling"},
-    {"name": "Notion", "slug": "notion"},
-    {"name": "Scale AI", "slug": "scaleai"},
-    {"name": "Asana", "slug": "asana"},
-    {"name": "Zendesk", "slug": "zendesk"},
-    {"name": "HubSpot", "slug": "hubspot"},
-    {"name": "Intercom", "slug": "intercom"},
-    {"name": "Segment", "slug": "segment"},
-    {"name": "Amplitude", "slug": "amplitude"},
-    {"name": "Mixpanel", "slug": "mixpanel"},
-    {"name": "Lattice", "slug": "lattice"},
-    {"name": "Loom", "slug": "loom"},
-    {"name": "Front", "slug": "front"},
-    {"name": "Algolia", "slug": "algolia"},
-    {"name": "Twilio", "slug": "twilio"},
-    {"name": "Cloudflare", "slug": "cloudflare"},
-    {"name": "Fastly", "slug": "fastly"},
-    {"name": "HashiCorp", "slug": "hashicorp"},
-    {"name": "Confluent", "slug": "confluent"},
-    {"name": "MongoDB", "slug": "mongodb"},
-    {"name": "Databricks", "slug": "databricks"},
-    {"name": "Snowflake", "slug": "snowflake"},
-    {"name": "dbt Labs", "slug": "dbtlabs"},
-    {"name": "Fivetran", "slug": "fivetran"},
-    {"name": "Weights & Biases", "slug": "wandb"},
-    {"name": "Hugging Face", "slug": "huggingface"},
-    {"name": "Anthropic", "slug": "anthropic"},
-    {"name": "OpenAI", "slug": "openai"},
-    {"name": "Cohere", "slug": "cohere"},
-    {"name": "Runway", "slug": "runwayml"},
-    {"name": "Stability AI", "slug": "stabilityai"},
-    {"name": "Midjourney", "slug": "midjourney"},
-    {"name": "Vercel", "slug": "vercel"},
-    {"name": "Netlify", "slug": "netlify"},
-    {"name": "Supabase", "slug": "supabase"},
-    {"name": "PlanetScale", "slug": "planetscale"},
-    {"name": "Railway", "slug": "railway"},
-    {"name": "Render", "slug": "render"},
-    {"name": "Fly.io", "slug": "flyio"},
-    {"name": "Replit", "slug": "replit"},
-    {"name": "Linear", "slug": "linear"},
-    {"name": "Coda", "slug": "coda"},
-    {"name": "Retool", "slug": "retool"},
-    {"name": "Airtable", "slug": "airtable"},
-    {"name": "Webflow", "slug": "webflow"},
-    {"name": "Framer", "slug": "framer"},
-    {"name": "Miro", "slug": "miro"},
-    {"name": "Figma Community", "slug": "figmacommunity"},
-    {"name": "Canva", "slug": "canva"},
-    {"name": "Pendo", "slug": "pendo"},
-    {"name": "Heap", "slug": "heap"},
-    {"name": "FullStory", "slug": "fullstory"},
-    {"name": "Hotjar", "slug": "hotjar"},
-    {"name": "Datadog", "slug": "datadog"},
-    {"name": "New Relic", "slug": "newrelic"},
-    {"name": "PagerDuty", "slug": "pagerduty"},
-    {"name": "Grafana Labs", "slug": "grafana"},
-    {"name": "Sentry", "slug": "sentry"},
-    {"name": "Dynatrace", "slug": "dynatrace"},
-    {"name": "Elastic", "slug": "elastic"},
-    {"name": "Splunk", "slug": "splunk"},
-    {"name": "CrowdStrike", "slug": "crowdstrike"},
-    {"name": "Okta", "slug": "okta"},
-    {"name": "Auth0", "slug": "auth0"},
-    {"name": "1Password", "slug": "1password"},
-    {"name": "LastPass", "slug": "lastpass"},
-    {"name": "Bitwarden", "slug": "bitwarden"},
-    {"name": "Snyk", "slug": "snyk"},
-    {"name": "Veracode", "slug": "veracode"},
-    {"name": "GitLab", "slug": "gitlab"},
-    {"name": "GitHub", "slug": "github"},
-    {"name": "Bitbucket", "slug": "bitbucket"},
-    {"name": "CircleCI", "slug": "circleci"},
-    {"name": "Travis CI", "slug": "travisci"},
-    {"name": "Buildkite", "slug": "buildkite"},
-    {"name": "ArgoCD", "slug": "argoproj"},
-    {"name": "Pulumi", "slug": "pulumi"},
-    {"name": "Terraform Cloud", "slug": "hashicorp"},
-    {"name": "Chef", "slug": "chef"},
-    {"name": "Puppet", "slug": "puppet"},
-    {"name": "Ansible", "slug": "ansible"},
-    {"name": "Ramp", "slug": "ramp"},
-    {"name": "Deel", "slug": "deel"},
-    {"name": "Remote.com", "slug": "remote"},
-    {"name": "Oyster HR", "slug": "oyster"},
-    {"name": "Pilot", "slug": "pilot"},
-    {"name": "Mercury", "slug": "mercury"},
-    {"name": "Clearco", "slug": "clearco"},
-    {"name": "Pipe", "slug": "pipe"},
-    {"name": "Capchase", "slug": "capchase"},
-    {"name": "Papaya Global", "slug": "papayaglobal"}
+    {
+      "name": "Stripe",
+      "slug": "stripe"
+    },
+    {
+      "name": "Figma",
+      "slug": "figma"
+    },
+    {
+      "name": "Airbnb",
+      "slug": "airbnb"
+    },
+    {
+      "name": "Dropbox",
+      "slug": "dropbox"
+    },
+    {
+      "name": "Lyft",
+      "slug": "lyft"
+    },
+    {
+      "name": "Brex",
+      "slug": "brex"
+    },
+    {
+      "name": "Gusto",
+      "slug": "gusto"
+    },
+    {
+      "name": "Robinhood",
+      "slug": "robinhood"
+    },
+    {
+      "name": "Scale AI",
+      "slug": "scaleai"
+    },
+    {
+      "name": "Asana",
+      "slug": "asana"
+    },
+    {
+      "name": "Intercom",
+      "slug": "intercom"
+    },
+    {
+      "name": "Amplitude",
+      "slug": "amplitude"
+    },
+    {
+      "name": "Mixpanel",
+      "slug": "mixpanel"
+    },
+    {
+      "name": "Lattice",
+      "slug": "lattice"
+    },
+    {
+      "name": "Algolia",
+      "slug": "algolia"
+    },
+    {
+      "name": "Twilio",
+      "slug": "twilio"
+    },
+    {
+      "name": "Cloudflare",
+      "slug": "cloudflare"
+    },
+    {
+      "name": "Fastly",
+      "slug": "fastly"
+    },
+    {
+      "name": "MongoDB",
+      "slug": "mongodb"
+    },
+    {
+      "name": "Databricks",
+      "slug": "databricks"
+    },
+    {
+      "name": "Fivetran",
+      "slug": "fivetran"
+    },
+    {
+      "name": "Anthropic",
+      "slug": "anthropic"
+    },
+    {
+      "name": "Stability AI",
+      "slug": "stabilityai"
+    },
+    {
+      "name": "Vercel",
+      "slug": "vercel"
+    },
+    {
+      "name": "Netlify",
+      "slug": "netlify"
+    },
+    {
+      "name": "PlanetScale",
+      "slug": "planetscale"
+    },
+    {
+      "name": "Airtable",
+      "slug": "airtable"
+    },
+    {
+      "name": "Webflow",
+      "slug": "webflow"
+    },
+    {
+      "name": "Pendo",
+      "slug": "pendo"
+    },
+    {
+      "name": "Datadog",
+      "slug": "datadog"
+    },
+    {
+      "name": "New Relic",
+      "slug": "newrelic"
+    },
+    {
+      "name": "PagerDuty",
+      "slug": "pagerduty"
+    },
+    {
+      "name": "Elastic",
+      "slug": "elastic"
+    },
+    {
+      "name": "Okta",
+      "slug": "okta"
+    },
+    {
+      "name": "LastPass",
+      "slug": "lastpass"
+    },
+    {
+      "name": "Bitwarden",
+      "slug": "bitwarden"
+    },
+    {
+      "name": "Veracode",
+      "slug": "veracode"
+    },
+    {
+      "name": "GitLab",
+      "slug": "gitlab"
+    },
+    {
+      "name": "CircleCI",
+      "slug": "circleci"
+    },
+    {
+      "name": "Buildkite",
+      "slug": "buildkite"
+    },
+    {
+      "name": "Remote.com",
+      "slug": "remote"
+    },
+    {
+      "name": "Mercury",
+      "slug": "mercury"
+    }
   ],
   "lever": [
-    {"name": "Shopify", "slug": "shopify"},
-    {"name": "Square", "slug": "square"},
-    {"name": "Reddit", "slug": "reddit"},
-    {"name": "Pinterest", "slug": "pinterest"},
-    {"name": "Yelp", "slug": "yelp"},
-    {"name": "Etsy", "slug": "etsy"},
-    {"name": "Wayfair", "slug": "wayfair"},
-    {"name": "Thumbtack", "slug": "thumbtack"},
-    {"name": "PagerDuty", "slug": "pagerduty"},
-    {"name": "New Relic", "slug": "new-relic"},
-    {"name": "LogRocket", "slug": "logrocket"},
-    {"name": "Optimizely", "slug": "optimizely"},
-    {"name": "Contentful", "slug": "contentful"},
-    {"name": "Stytch", "slug": "stytch"},
-    {"name": "WorkOS", "slug": "workos"},
-    {"name": "Clerk", "slug": "clerk"},
-    {"name": "Neon", "slug": "neondatabase"},
-    {"name": "Turso", "slug": "turso"},
-    {"name": "Xata", "slug": "xata"},
-    {"name": "Upstash", "slug": "upstash"},
-    {"name": "Inngest", "slug": "inngest"},
-    {"name": "Temporal", "slug": "temporal"},
-    {"name": "Prefect", "slug": "prefect"},
-    {"name": "Dagster", "slug": "dagster"},
-    {"name": "dbt Labs", "slug": "dbt-labs"},
-    {"name": "Airbyte", "slug": "airbyte"},
-    {"name": "Meltano", "slug": "meltano"},
-    {"name": "Singer", "slug": "singer"},
-    {"name": "Stitch Data", "slug": "stitch"},
-    {"name": "Matillion", "slug": "matillion"},
-    {"name": "Hightouch", "slug": "hightouch"},
-    {"name": "Census", "slug": "census"},
-    {"name": "Rudderstack", "slug": "rudderstack"},
-    {"name": "mParticle", "slug": "mparticle"},
-    {"name": "Segment", "slug": "twilio-segment"},
-    {"name": "Braze", "slug": "braze"},
-    {"name": "Iterable", "slug": "iterable"},
-    {"name": "Customer.io", "slug": "customerio"},
-    {"name": "Klaviyo", "slug": "klaviyo"},
-    {"name": "Mailchimp", "slug": "mailchimp"},
-    {"name": "Sendgrid", "slug": "sendgrid"},
-    {"name": "Postmark", "slug": "postmark"},
-    {"name": "Postman", "slug": "postman"},
-    {"name": "Insomnia", "slug": "kong"},
-    {"name": "Kong", "slug": "kong-inc"},
-    {"name": "Apigee", "slug": "apigee"},
-    {"name": "MuleSoft", "slug": "mulesoft"},
-    {"name": "Zapier", "slug": "zapier"},
-    {"name": "Make", "slug": "make"},
-    {"name": "n8n", "slug": "n8n"},
-    {"name": "Pipedream", "slug": "pipedream"},
-    {"name": "Tray.io", "slug": "tray"},
-    {"name": "Workato", "slug": "workato"},
-    {"name": "Boomi", "slug": "boomi"},
-    {"name": "Informatica", "slug": "informatica"},
-    {"name": "Talend", "slug": "talend"},
-    {"name": "Pentaho", "slug": "hitachi-vantara"},
-    {"name": "TIBCO", "slug": "tibco"},
-    {"name": "MicroStrategy", "slug": "microstrategy"},
-    {"name": "Qlik", "slug": "qlik"},
-    {"name": "Looker", "slug": "looker"},
-    {"name": "Tableau", "slug": "tableau"},
-    {"name": "Power BI", "slug": "microsoft"},
-    {"name": "ThoughtSpot", "slug": "thoughtspot"},
-    {"name": "Sigma", "slug": "sigma-computing"},
-    {"name": "Mode", "slug": "mode"},
-    {"name": "Metabase", "slug": "metabase"},
-    {"name": "Redash", "slug": "redash"},
-    {"name": "Apache Superset", "slug": "preset"},
-    {"name": "Grafana", "slug": "grafana-labs"},
-    {"name": "Prometheus", "slug": "prometheus"},
-    {"name": "InfluxDB", "slug": "influxdata"},
-    {"name": "TimescaleDB", "slug": "timescale"},
-    {"name": "QuestDB", "slug": "questdb"},
-    {"name": "ClickHouse", "slug": "clickhouse"},
-    {"name": "StarRocks", "slug": "starrocks"},
-    {"name": "Imply", "slug": "imply"},
-    {"name": "Rockset", "slug": "rockset"},
-    {"name": "Pinecone", "slug": "pinecone"},
-    {"name": "Weaviate", "slug": "weaviate"},
-    {"name": "Qdrant", "slug": "qdrant"},
-    {"name": "Chroma", "slug": "chroma"},
-    {"name": "Milvus", "slug": "zilliz"},
-    {"name": "LangChain", "slug": "langchain"},
-    {"name": "LlamaIndex", "slug": "llamaindex"},
-    {"name": "Haystack", "slug": "deepset"},
-    {"name": "Activeloop", "slug": "activeloop"},
-    {"name": "Vellum", "slug": "vellum"},
-    {"name": "PromptLayer", "slug": "promptlayer"},
-    {"name": "Humanloop", "slug": "humanloop"},
-    {"name": "Weights & Biases", "slug": "wandb"},
-    {"name": "Determined AI", "slug": "determined-ai"},
-    {"name": "Modal", "slug": "modal-labs"},
-    {"name": "BentoML", "slug": "bentoml"},
-    {"name": "Seldon", "slug": "seldon"},
-    {"name": "Hopsworks", "slug": "hopsworks"},
-    {"name": "Tecton", "slug": "tecton"},
-    {"name": "Feast", "slug": "feast"},
-    {"name": "Evidently", "slug": "evidentlyai"},
-    {"name": "WhyLabs", "slug": "whylabs"},
-    {"name": "Arize", "slug": "arize"},
-    {"name": "Fiddler", "slug": "fiddler"},
-    {"name": "Arthur AI", "slug": "arthur-ai"},
-    {"name": "Aporia", "slug": "aporia"}
+    {
+      "name": "LogRocket",
+      "slug": "logrocket"
+    },
+    {
+      "name": "Matillion",
+      "slug": "matillion"
+    },
+    {
+      "name": "Metabase",
+      "slug": "metabase"
+    },
+    {
+      "name": "Milvus",
+      "slug": "zilliz"
+    }
   ],
   "ashby": [
-    {"name": "Linear", "slug": "linear"},
-    {"name": "Vercel", "slug": "vercel"},
-    {"name": "Netlify", "slug": "netlify"},
-    {"name": "Supabase", "slug": "supabase"},
-    {"name": "PlanetScale", "slug": "planetscale"},
-    {"name": "Railway", "slug": "railway"},
-    {"name": "Fly.io", "slug": "fly"},
-    {"name": "Render", "slug": "render"},
-    {"name": "Clerk", "slug": "clerk"},
-    {"name": "WorkOS", "slug": "workos"},
-    {"name": "Stytch", "slug": "stytch"},
-    {"name": "Neon", "slug": "neon"},
-    {"name": "Turso", "slug": "turso"},
-    {"name": "Xata", "slug": "xata"},
-    {"name": "Upstash", "slug": "upstash"},
-    {"name": "Inngest", "slug": "inngest"},
-    {"name": "Temporal", "slug": "temporal"},
-    {"name": "Retool", "slug": "retool"},
-    {"name": "Replit", "slug": "replit"},
-    {"name": "Codeium", "slug": "codeium"},
-    {"name": "Cursor", "slug": "cursor"},
-    {"name": "Sourcegraph", "slug": "sourcegraph"},
-    {"name": "Tabnine", "slug": "tabnine"},
-    {"name": "GitPod", "slug": "gitpod"},
-    {"name": "Coder", "slug": "coder"},
-    {"name": "Devpod", "slug": "loft-labs"},
-    {"name": "Dagger", "slug": "dagger"},
-    {"name": "Earthly", "slug": "earthly"},
-    {"name": "Depot", "slug": "depot"},
-    {"name": "Coherence", "slug": "coherence"},
-    {"name": "Stacktape", "slug": "stacktape"},
-    {"name": "Pulumi", "slug": "pulumi"},
-    {"name": "Spacelift", "slug": "spacelift"},
-    {"name": "Env0", "slug": "env0"},
-    {"name": "Atlantis", "slug": "runatlantis"},
-    {"name": "Terrateam", "slug": "terrateam"},
-    {"name": "Scalr", "slug": "scalr"},
-    {"name": "Brainboard", "slug": "brainboard"},
-    {"name": "Port", "slug": "port"},
-    {"name": "Backstage", "slug": "spotify"},
-    {"name": "OpsLevel", "slug": "opslevel"},
-    {"name": "Cortex", "slug": "cortex"},
-    {"name": "Humanitec", "slug": "humanitec"},
-    {"name": "Qovery", "slug": "qovery"},
-    {"name": "Gimlet", "slug": "gimlet"},
-    {"name": "Shipa", "slug": "shipa"},
-    {"name": "Bunnyshell", "slug": "bunnyshell"},
-    {"name": "Uffizzi", "slug": "uffizzi"},
-    {"name": "Okteto", "slug": "okteto"},
-    {"name": "Devzero", "slug": "devzero"}
+    {
+      "name": "Linear",
+      "slug": "linear"
+    },
+    {
+      "name": "Supabase",
+      "slug": "supabase"
+    },
+    {
+      "name": "Railway",
+      "slug": "railway"
+    },
+    {
+      "name": "Render",
+      "slug": "render"
+    },
+    {
+      "name": "Clerk",
+      "slug": "clerk"
+    },
+    {
+      "name": "WorkOS",
+      "slug": "workos"
+    },
+    {
+      "name": "Stytch",
+      "slug": "stytch"
+    },
+    {
+      "name": "Neon",
+      "slug": "neon"
+    },
+    {
+      "name": "Inngest",
+      "slug": "inngest"
+    },
+    {
+      "name": "Replit",
+      "slug": "replit"
+    },
+    {
+      "name": "Cursor",
+      "slug": "cursor"
+    },
+    {
+      "name": "Coder",
+      "slug": "coder"
+    },
+    {
+      "name": "OpsLevel",
+      "slug": "opslevel"
+    },
+    {
+      "name": "Gimlet",
+      "slug": "gimlet"
+    }
   ],
   "personio": [
-    {"name": "Zalando", "slug": "zalando"},
-    {"name": "Delivery Hero", "slug": "delivery-hero"},
-    {"name": "HelloFresh", "slug": "hellofresh"},
-    {"name": "N26", "slug": "n26"},
-    {"name": "Trade Republic", "slug": "traderepublic"},
-    {"name": "Celonis", "slug": "celonis"},
-    {"name": "Staffbase", "slug": "staffbase"},
-    {"name": "Personio", "slug": "personio"},
-    {"name": "Contentful", "slug": "contentful"},
-    {"name": "Westwing", "slug": "westwing"},
-    {"name": "About You", "slug": "aboutyou"},
-    {"name": "Flixbus", "slug": "flixbus"},
-    {"name": "Wirecard", "slug": "wirecard"},
-    {"name": "Trivago", "slug": "trivago"},
-    {"name": "Idealista", "slug": "idealista"},
-    {"name": "Wallapop", "slug": "wallapop"},
-    {"name": "Factorial HR", "slug": "factorial"},
-    {"name": "Holded", "slug": "holded"},
-    {"name": "Typeform", "slug": "typeform"},
-    {"name": "Factorial", "slug": "factorialhr"},
-    {"name": "Glovo", "slug": "glovo"},
-    {"name": "Cabify", "slug": "cabify"},
-    {"name": "Mango", "slug": "mango"},
-    {"name": "Naturgy", "slug": "naturgy"},
-    {"name": "Santander", "slug": "santander"},
-    {"name": "BBVA", "slug": "bbva"},
-    {"name": "CaixaBank", "slug": "caixabank"},
-    {"name": "Bankia", "slug": "bankia"},
-    {"name": "ING España", "slug": "ing"},
-    {"name": "Telefonica", "slug": "telefonica"},
-    {"name": "Adevinta", "slug": "adevinta"},
-    {"name": "Mediapro", "slug": "mediapro"},
-    {"name": "Vueling", "slug": "vueling"},
-    {"name": "Flightradar24", "slug": "flightradar24"},
-    {"name": "Kiwi.com", "slug": "kiwi"},
-    {"name": "Skyscanner", "slug": "skyscanner"},
-    {"name": "Omio", "slug": "omio"},
-    {"name": "GetYourGuide", "slug": "getyourguide"},
-    {"name": "Contentsquare", "slug": "contentsquare"},
-    {"name": "Sendinblue", "slug": "sendinblue"},
-    {"name": "Doctolib", "slug": "doctolib"},
-    {"name": "Qonto", "slug": "qonto"},
-    {"name": "Ledger", "slug": "ledger"},
-    {"name": "Payfit", "slug": "payfit"},
-    {"name": "Spendesk", "slug": "spendesk"},
-    {"name": "Alan", "slug": "alan"},
-    {"name": "Pennylane", "slug": "pennylane"},
-    {"name": "Swile", "slug": "swile"},
-    {"name": "Luko", "slug": "luko"},
-    {"name": "Heetch", "slug": "heetch"}
+    {
+      "name": "Celonis",
+      "slug": "celonis"
+    },
+    {
+      "name": "Personio",
+      "slug": "personio"
+    },
+    {
+      "name": "Westwing",
+      "slug": "westwing"
+    },
+    {
+      "name": "Cabify",
+      "slug": "cabify"
+    },
+    {
+      "name": "Kiwi.com",
+      "slug": "kiwi"
+    },
+    {
+      "name": "Alan",
+      "slug": "alan"
+    }
   ]
 }
