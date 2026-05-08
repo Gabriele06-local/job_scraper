@@ -1,0 +1,45 @@
+{
+  "input": {
+    "title": "Développeur Backend Python",
+    "company_name": "TechFrance SARL",
+    "location_raw": "Paris (Hybride)",
+    "description": "TechFrance SARL recrute un Développeur Backend Python expérimenté pour rejoindre notre équipe produit à Paris. Vous concevrez et développerez des APIs performantes avec Python 3 en utilisant Django et FastAPI selon les besoins du projet, vous gérerez les données relationnelles avec PostgreSQL et le cache applicatif avec Redis, vous containeriserez les services avec Docker et automatiserez les pipelines CI/CD via GitLab CI. Profil recherché : minimum 3 ans d'expérience en développement backend Python, maîtrise de Django ou FastAPI, PostgreSQL, Redis, Docker et GitLab CI, bonne compréhension des architectures REST API. Poste en télétravail hybride avec présence 2 jours par semaine à nos bureaux de Paris. Rémunération entre 50.000 et 65.000 EUR bruts annuels.",
+    "detected_language": "fr",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/fr/72001",
+    "posted_at": "2026-04-22T09:30:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": [
+        "Python",
+        "Django",
+        "FastAPI",
+        "PostgreSQL",
+        "Redis",
+        "Docker",
+        "GitLab CI",
+        "REST API"
+      ],
+      "category": "backend",
+      "seniority": "mid",
+      "role_family": "backend",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": 50000,
+      "salary_max": 65000,
+      "currency": "EUR",
+      "languages_required": [
+        "fr"
+      ],
+      "quality_flags": [
+        "has_requirements",
+        "has_tech_stack"
+      ],
+      "confidence": 0.85
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "input": {
+    "title": "QA Engineer Junior",
+    "company_name": "Qualità Test Srl",
+    "location_raw": "Roma, Italia (In sede)",
+    "description": "Qualità Test Srl, azienda di consulenza IT con sede a Roma, seleziona un QA Engineer Junior da inserire nel proprio team di quality assurance. Il candidato si occuperà di definire ed eseguire test funzionali manuali e automatizzati sui prodotti software sviluppati internamente e per i clienti. Attività previste: scrittura ed esecuzione di test case manuali, sviluppo di test automatizzati con Selenium WebDriver, testing delle API con Postman, gestione dei bug su JIRA e TestRail, collaborazione con i team di sviluppo per la risoluzione delle anomalie, partecipazione alle sessioni di regression testing. Competenze richieste: conoscenza base di Selenium, Postman per il testing API, JIRA per il tracking dei bug, TestRail per la gestione dei test case, SQL per la verifica dei dati. Profilo junior accettato, preferibile esperienza di tirocinio o stage nel settore QA. Sede di lavoro: Roma, in presenza. Nessuna possibilità di lavoro da remoto in questa fase.",
+    "detected_language": "it",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/it/123463",
+    "posted_at": "2026-04-21T12:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": [
+        "Selenium",
+        "Postman",
+        "JIRA",
+        "TestRail",
+        "SQL"
+      ],
+      "category": "quality_assurance",
+      "seniority": "junior",
+      "role_family": "qa",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": [
+        "it"
+      ],
+      "quality_flags": [
+        "has_requirements"
+      ],
+      "confidence": 0.76
+    }
+  }
+}

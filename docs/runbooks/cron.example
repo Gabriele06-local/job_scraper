@@ -1,0 +1,36 @@
+# DevBoards Import Service — cron schedule examples
+#
+# Add to root crontab (crontab -e) or /etc/cron.d/devboards
+# Adjust paths and python interpreter as needed.
+#
+# Environment:
+#   WORKDIR  = absolute path to job_scraper root
+#   PYTHON   = path to venv python (e.g. /opt/venv/bin/python)
+#   LOG_DIR  = writable log directory
+
+WORKDIR=/opt/devboards/job_scraper
+PYTHON=/opt/venv/bin/python
+LOG_DIR=/var/log/devboards
+
+# --- Full import pipeline every 4 hours ---
+0 */4 * * *  cd $WORKDIR && $PYTHON -m import_service.cli import >> $LOG_DIR/import.log 2>&1
+
+# --- Expiration probe daily at 03:00 UTC ---
+0 3 * * *    cd $WORKDIR && $PYTHON -m import_service.cli expire >> $LOG_DIR/expire.log 2>&1
+
+# --- Reindex weekly on Sunday at 02:00 UTC (idempotent, safe) ---
+0 2 * * 0    cd $WORKDIR && $PYTHON -m import_service.cli reindex >> $LOG_DIR/reindex.log 2>&1
+
+# --- Stats daily at 06:00 UTC (for monitoring / dashboards) ---
+0 6 * * *    cd $WORKDIR && $PYTHON -m import_service.cli stats >> $LOG_DIR/stats.log 2>&1
+
+# --- Docker Compose alternative (if using docker-compose.yml) ---
+# The importer and expirer services use environment variables for intervals:
+#   IMPORT_INTERVAL_SECONDS=14400   (4h)
+#   EXPIRE_INTERVAL_SECONDS=86400   (24h)
+# Start services:
+#   docker compose up -d importer expirer
+# One-shot reindex:
+#   docker compose run --rm reindex
+# One-shot stats:
+#   docker compose run --rm stats

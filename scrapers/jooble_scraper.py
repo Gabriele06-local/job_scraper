@@ -3,9 +3,20 @@ import logging
 import os
 from datetime import datetime, timedelta
 from typing import List, Dict
+from urllib.parse import parse_qs, urlparse
+
 from .base_scraper import BaseScraper
 
 logger = logging.getLogger(__name__)
+
+
+def _is_closed_jooble_job(url: str) -> bool:
+    """Return True if Jooble URL signals a closed/unavailable listing."""
+    try:
+        params = parse_qs(urlparse(url).query)
+        return params.get("closedJob", [""])[0].lower() == "true"
+    except Exception:
+        return False
 
 
 class JoobleScraper(BaseScraper):
@@ -70,21 +81,26 @@ class JoobleScraper(BaseScraper):
             data = response.json()
 
             jobs = []
+            skipped_closed = 0
             for item in data.get("jobs", []):
+                link = item.get("link") or ""
+                if _is_closed_jooble_job(link):
+                    skipped_closed += 1
+                    continue
                 jobs.append(
                     {
                         "title": item.get("title"),
                         "company": {"name": item.get("company") or "Unknown"},
                         "description": self.clean_description(item.get("snippet")),
-                        "link": item.get("link"),
+                        "link": link,
                         "location_raw": item.get("location"),
                         "source": f"Jooble ({item.get('source', 'Unknown')})",
                         "original_language": lang,
-                        "published_at": item.get(
-                            "updated"
-                        ),  # Jooble returns update date
+                        "published_at": item.get("updated"),
                     }
                 )
+            if skipped_closed:
+                logger.info(f"Jooble: skipped {skipped_closed} closed jobs for '{keyword}' ({lang})")
             return jobs
         except Exception as e:
             logger.error(f"Error scraping Jooble API: {e}")

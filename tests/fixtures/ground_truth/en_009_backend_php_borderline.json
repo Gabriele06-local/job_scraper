@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Backend Developer PHP",
+    "company_name": "WebAgency Ltd",
+    "location_raw": "Warsaw, Poland (Hybrid)",
+    "description": "WebAgency Ltd is a digital agency based in Warsaw, Poland, delivering web solutions for clients across e-commerce, publishing, and professional services. We are looking for a Backend Developer with solid PHP and Laravel experience to join our engineering team. The role follows a hybrid model with 2 days in our Warsaw office and 3 days remote. Responsibilities: develop and maintain backend applications and REST APIs using PHP 8 and the Laravel framework, design and optimize MySQL database schemas and queries, implement caching strategies with Redis to improve application performance, collaborate with frontend developers on API contracts and integration, participate in code reviews and contribute to technical documentation, work within Git-based workflows with feature branches and pull requests. Requirements: 3+ years of experience in backend web development, strong PHP 8 knowledge including modern language features, hands-on Laravel experience in production projects, MySQL database design and query optimization, Redis for caching and queue management, REST API design and implementation, Docker for local development environments, Git proficiency. Hybrid position in Warsaw. Salary: EUR 45,000 - 60,000 per year.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234575",
+    "posted_at": "2026-04-21T13:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["PHP", "Laravel", "MySQL", "Redis", "REST API", "Git", "Docker"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "backend",
+      "employment_type": "full_time",
+      "remote_mode": "hybrid",
+      "salary_min": 45000,
+      "salary_max": 60000,
+      "currency": "EUR",
+      "languages_required": ["en"],
+      "quality_flags": ["has_requirements", "has_tech_stack"],
+      "confidence": 0.78
+    }
+  }
+}

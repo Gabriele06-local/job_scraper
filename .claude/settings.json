@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "deny": {
+      "Read": [
+        ".env",
+        ".env.production",
+        ".env.*",
+        "**/secrets/**",
+        "~/.ssh/**",
+        "~/.aws/**",
+        "~/.config/gcloud/**"
+      ],
+      "Write": [
+        ".env",
+        ".env.production",
+        ".env.*",
+        "**/secrets/**"
+      ],
+      "Bash": [
+        "rm -rf /*",
+        "rm -rf ~",
+        "rm -rf $HOME*",
+        "git push --force *",
+        "git push -f *",
+        "sudo *",
+        "curl * | bash",
+        "curl * | sh",
+        "wget * | bash",
+        "chmod 777 *"
+      ]
+    }
+  },
+  "enableAllProjectMcpServers": true
+}

@@ -1,0 +1,44 @@
+{
+  "input": {
+    "title": "Security Engineer",
+    "company_name": "SecureOps Inc",
+    "location_raw": "New York, NY, USA (On-site)",
+    "description": "SecureOps Inc is a cybersecurity consulting firm based in New York City. We are looking for a mid-level Security Engineer to join our offensive security and vulnerability management practice. The role is fully on-site at our Manhattan office. You will conduct security assessments, penetration tests, and vulnerability research for our enterprise clients across financial services, healthcare, and critical infrastructure sectors. Responsibilities: perform web application and network penetration testing using industry-standard methodologies and tools, apply OWASP Top 10 knowledge to identify and exploit vulnerabilities in web applications, use Burp Suite Pro for web application testing and manual vulnerability analysis, conduct network security assessments with tools such as Nmap, Nessus, and Metasploit, write Python scripts to automate reconnaissance and testing tasks, work with SIEM platforms to analyze security events and correlate findings, prepare detailed technical reports with remediation recommendations for client stakeholders. Requirements: 4+ years of experience in offensive security or penetration testing, strong hands-on knowledge of OWASP vulnerability categories, proficiency with Burp Suite for web application testing, Linux systems knowledge and Python scripting for security automation, Nmap and network protocol fundamentals, CISSP, CEH, or OSCP certification preferred. On-site in New York City, no salary information provided.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234574",
+    "posted_at": "2026-04-21T12:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "valid",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": [
+        "Penetration Testing",
+        "OWASP",
+        "Burp Suite",
+        "Python",
+        "Nmap",
+        "SIEM",
+        "Linux"
+      ],
+      "category": "security",
+      "seniority": "mid",
+      "role_family": "security",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": [
+        "en"
+      ],
+      "quality_flags": [
+        "has_requirements",
+        "has_tech_stack"
+      ],
+      "confidence": 0.82
+    }
+  }
+}

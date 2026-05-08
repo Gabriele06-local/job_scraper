@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Senior DevOps / SRE Engineer",
+    "company_name": "CloudScale Corp",
+    "location_raw": "Remote (US)",
+    "description": "CloudScale Corp is hiring a Senior DevOps / SRE Engineer to lead the reliability and automation efforts for our cloud infrastructure. You will own the full lifecycle of our AWS-based platform, driving improvements in deployment velocity, system reliability, and operational efficiency. This is a senior-level, fully remote role for engineers with a strong background in cloud infrastructure, automation, and observability. Core responsibilities: design, provision, and manage AWS infrastructure (EKS, Lambda, RDS, S3, VPC, IAM) using Terraform as infrastructure-as-code, build and maintain CI/CD pipelines with GitLab CI for automated testing and deployment, manage container orchestration with Kubernetes including cluster upgrades, scaling policies, and network configuration, implement and own observability stack with Prometheus and Grafana for metrics, alerting, and dashboards, write Python and Bash automation scripts for operational tasks, participate in incident response and post-mortem processes. Requirements: 7+ years of experience in DevOps, SRE, or infrastructure engineering, deep expertise in AWS services (EKS, Lambda, RDS, S3 mandatory), Terraform for infrastructure-as-code in production environments, Kubernetes cluster administration experience, CI/CD pipeline design with GitLab CI or equivalent, strong Python and Bash scripting skills, Prometheus and Grafana for monitoring and alerting. Fully remote, US-based. Salary: USD 120,000 - 160,000 per year, plus comprehensive benefits and stock options.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234569",
+    "posted_at": "2026-04-20T12:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["AWS", "Terraform", "Kubernetes", "GitLab CI", "Python", "Prometheus", "Grafana", "Docker", "Bash", "Lambda"],
+      "category": "infrastructure",
+      "seniority": "senior",
+      "role_family": "devops",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 120000,
+      "salary_max": 160000,
+      "currency": "USD",
+      "languages_required": ["en"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack", "has_benefits"],
+      "confidence": 0.95
+    }
+  }
+}

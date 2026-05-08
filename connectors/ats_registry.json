@@ -1,0 +1,274 @@
+{
+  "greenhouse": [
+    {
+      "name": "Stripe",
+      "slug": "stripe"
+    },
+    {
+      "name": "Figma",
+      "slug": "figma"
+    },
+    {
+      "name": "Airbnb",
+      "slug": "airbnb"
+    },
+    {
+      "name": "Dropbox",
+      "slug": "dropbox"
+    },
+    {
+      "name": "Lyft",
+      "slug": "lyft"
+    },
+    {
+      "name": "Brex",
+      "slug": "brex"
+    },
+    {
+      "name": "Gusto",
+      "slug": "gusto"
+    },
+    {
+      "name": "Robinhood",
+      "slug": "robinhood"
+    },
+    {
+      "name": "Scale AI",
+      "slug": "scaleai"
+    },
+    {
+      "name": "Asana",
+      "slug": "asana"
+    },
+    {
+      "name": "Intercom",
+      "slug": "intercom"
+    },
+    {
+      "name": "Amplitude",
+      "slug": "amplitude"
+    },
+    {
+      "name": "Mixpanel",
+      "slug": "mixpanel"
+    },
+    {
+      "name": "Lattice",
+      "slug": "lattice"
+    },
+    {
+      "name": "Algolia",
+      "slug": "algolia"
+    },
+    {
+      "name": "Twilio",
+      "slug": "twilio"
+    },
+    {
+      "name": "Cloudflare",
+      "slug": "cloudflare"
+    },
+    {
+      "name": "Fastly",
+      "slug": "fastly"
+    },
+    {
+      "name": "MongoDB",
+      "slug": "mongodb"
+    },
+    {
+      "name": "Databricks",
+      "slug": "databricks"
+    },
+    {
+      "name": "Fivetran",
+      "slug": "fivetran"
+    },
+    {
+      "name": "Anthropic",
+      "slug": "anthropic"
+    },
+    {
+      "name": "Stability AI",
+      "slug": "stabilityai"
+    },
+    {
+      "name": "Vercel",
+      "slug": "vercel"
+    },
+    {
+      "name": "Netlify",
+      "slug": "netlify"
+    },
+    {
+      "name": "PlanetScale",
+      "slug": "planetscale"
+    },
+    {
+      "name": "Airtable",
+      "slug": "airtable"
+    },
+    {
+      "name": "Webflow",
+      "slug": "webflow"
+    },
+    {
+      "name": "Pendo",
+      "slug": "pendo"
+    },
+    {
+      "name": "Datadog",
+      "slug": "datadog"
+    },
+    {
+      "name": "New Relic",
+      "slug": "newrelic"
+    },
+    {
+      "name": "PagerDuty",
+      "slug": "pagerduty"
+    },
+    {
+      "name": "Elastic",
+      "slug": "elastic"
+    },
+    {
+      "name": "Okta",
+      "slug": "okta"
+    },
+    {
+      "name": "LastPass",
+      "slug": "lastpass"
+    },
+    {
+      "name": "Bitwarden",
+      "slug": "bitwarden"
+    },
+    {
+      "name": "Veracode",
+      "slug": "veracode"
+    },
+    {
+      "name": "GitLab",
+      "slug": "gitlab"
+    },
+    {
+      "name": "CircleCI",
+      "slug": "circleci"
+    },
+    {
+      "name": "Buildkite",
+      "slug": "buildkite"
+    },
+    {
+      "name": "Remote.com",
+      "slug": "remote"
+    },
+    {
+      "name": "Mercury",
+      "slug": "mercury"
+    }
+  ],
+  "lever": [
+    {
+      "name": "LogRocket",
+      "slug": "logrocket"
+    },
+    {
+      "name": "Matillion",
+      "slug": "matillion"
+    },
+    {
+      "name": "Metabase",
+      "slug": "metabase"
+    },
+    {
+      "name": "Milvus",
+      "slug": "zilliz"
+    }
+  ],
+  "ashby": [
+    {
+      "name": "Linear",
+      "slug": "linear"
+    },
+    {
+      "name": "Supabase",
+      "slug": "supabase"
+    },
+    {
+      "name": "Railway",
+      "slug": "railway"
+    },
+    {
+      "name": "Render",
+      "slug": "render"
+    },
+    {
+      "name": "Clerk",
+      "slug": "clerk"
+    },
+    {
+      "name": "WorkOS",
+      "slug": "workos"
+    },
+    {
+      "name": "Stytch",
+      "slug": "stytch"
+    },
+    {
+      "name": "Neon",
+      "slug": "neon"
+    },
+    {
+      "name": "Inngest",
+      "slug": "inngest"
+    },
+    {
+      "name": "Replit",
+      "slug": "replit"
+    },
+    {
+      "name": "Cursor",
+      "slug": "cursor"
+    },
+    {
+      "name": "Coder",
+      "slug": "coder"
+    },
+    {
+      "name": "OpsLevel",
+      "slug": "opslevel"
+    },
+    {
+      "name": "Gimlet",
+      "slug": "gimlet"
+    }
+  ],
+  "personio": [
+    {
+      "name": "Celonis",
+      "slug": "celonis"
+    },
+    {
+      "name": "Personio",
+      "slug": "personio"
+    },
+    {
+      "name": "Westwing",
+      "slug": "westwing"
+    },
+    {
+      "name": "Cabify",
+      "slug": "cabify"
+    },
+    {
+      "name": "Kiwi.com",
+      "slug": "kiwi"
+    },
+    {
+      "name": "Alan",
+      "slug": "alan"
+    }
+  ]
+}

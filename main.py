@@ -16,15 +16,11 @@ from utils.description_fetcher import DescriptionFetcher
 from markdownify import markdownify as md
 from scrapers.adzuna_scraper import AdzunaScraper
 from scrapers.rss_scraper import RSSScraper
-from scrapers.jobisjob_scraper import JobisJobScraper
 from scrapers.jooble_scraper import JoobleScraper
 from scrapers.remoteok_scraper import RemoteOKScraper
 from scrapers.arbeitnow_scraper import ArbeitnowScraper
 from scrapers.jobicy_scraper import JobicyScraper
 from scrapers.iprogrammatori_scraper import IProgrammatoriScraper
-from scrapers.linkedin_scraper import LinkedInScraper
-from scrapers.techmap_scraper import TechMapScraper
-from scrapers.jobscollider_scraper import JobsColliderScraper
 
 # Load environment variables
 load_dotenv()
@@ -59,7 +55,6 @@ class JobScraperOrchestrator:
 
         # Initialize scrapers
         self.scrapers = [
-            LinkedInScraper(),  # LinkedIn FIRST (uses free public API)
             IProgrammatoriScraper(),
             ArbeitnowScraper(),
             JobicyScraper(),
@@ -67,20 +62,14 @@ class JobScraperOrchestrator:
             AdzunaScraper(
                 app_id=os.getenv("ADZUNA_APP_ID"), app_key=os.getenv("ADZUNA_APP_KEY")
             ),
-            JobisJobScraper(),
             JoobleScraper(api_key=os.getenv("JOOBLE_API_KEY")),
             RSSScraper(
                 rss_urls={
                     "en": [
                         "https://weworkremotely.com/categories/remote-programming-jobs.rss",
-                        "https://himalayas.app/jobs/rss",
-                        "https://remotive.io/remote-jobs/feed",
-                        "https://jobicy.com/feed",
                     ],
                 }
             ),
-            # TechMapScraper(api_token=os.getenv("TECHMAP_API_TOKEN")),
-            # JobsColliderScraper(api_token=os.getenv("JOBSCOLLIDER_API_TOKEN")),
         ]
 
         self.languages = languages or ["en", "it", "es", "fr", "de"]

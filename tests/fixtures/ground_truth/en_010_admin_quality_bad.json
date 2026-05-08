@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "Administrative Assistant",
+    "company_name": "Global Corp",
+    "location_raw": "London, UK (On-site)",
+    "description": "Global Corp, a multinational professional services company based in central London, is seeking an Administrative Assistant to support our operations team. The successful candidate will provide day-to-day administrative support across a range of functions including office management, scheduling, and client communications. Key responsibilities: manage executive calendars and coordinate meetings across multiple time zones, handle incoming and outgoing correspondence via email and telephone, prepare and format documents, presentations, and reports using Microsoft Office suite (Word, Excel, PowerPoint, Outlook), organize travel arrangements and expense reports, maintain filing systems and ensure records are kept up to date, assist with onboarding of new staff, liaise with facilities, IT support, and external vendors as required. Requirements: previous experience in an administrative or office support role, proficiency with Microsoft Office applications especially Excel and Outlook, excellent written and verbal communication skills in English, strong organizational skills and attention to detail, ability to manage competing priorities and work independently, professional demeanor and discretion when handling confidential information. This is a full-time on-site position based at our London office. No salary advertised.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234576",
+    "posted_at": "2026-04-21T14:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "rejected_quality",
+    "expected_reject_reason": "INSUFFICIENT_SKILLS",
+    "ai_output": {
+      "skills": ["Microsoft Office", "Excel", "scheduling"],
+      "category": "administration",
+      "seniority": "junior",
+      "role_family": "other",
+      "employment_type": "full_time",
+      "remote_mode": "onsite",
+      "salary_min": null,
+      "salary_max": null,
+      "currency": null,
+      "languages_required": ["en"],
+      "quality_flags": ["boilerplate"],
+      "confidence": 0.80
+    }
+  }
+}

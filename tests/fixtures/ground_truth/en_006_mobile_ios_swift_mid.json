@@ -1,0 +1,31 @@
+{
+  "input": {
+    "title": "iOS Developer Swift",
+    "company_name": "MobileFirst Ltd",
+    "location_raw": "Remote",
+    "description": "MobileFirst Ltd builds premium mobile products for clients in the health, finance, and consumer sectors. We are looking for an iOS Developer with solid Swift experience to join our mobile engineering team in a fully remote role. You will be responsible for building and maintaining high-quality native iOS applications from design specs to App Store release. Responsibilities: develop native iOS applications using Swift and SwiftUI for declarative UI construction, implement data persistence with Core Data, integrate with REST APIs using URLSession and third-party networking libraries, manage the full App Store deployment lifecycle including provisioning profiles, certificates, and TestFlight distribution, write unit and UI tests to ensure code quality, collaborate with designers and backend engineers using Git and pull request workflows. Requirements: 3+ years of professional iOS development experience, strong Swift knowledge (Swift 5+), experience with SwiftUI for building modern iOS interfaces, Core Data for local persistence, REST API integration, familiarity with App Store Connect and TestFlight, proficiency with Git. Nice to have: experience with Combine framework, push notifications, or background tasks. Fully remote position, salary: USD 85,000 - 110,000 per year.",
+    "detected_language": "en",
+    "source": "adzuna",
+    "url": "https://jobs.adzuna.com/job/en/234572",
+    "posted_at": "2026-04-21T10:00:00"
+  },
+  "expected_output": {
+    "should_pass_prefilter": true,
+    "expected_status": "premium",
+    "expected_reject_reason": null,
+    "ai_output": {
+      "skills": ["Swift", "SwiftUI", "Xcode", "Core Data", "REST API", "Git", "TestFlight"],
+      "category": "software_engineering",
+      "seniority": "mid",
+      "role_family": "mobile",
+      "employment_type": "full_time",
+      "remote_mode": "remote",
+      "salary_min": 85000,
+      "salary_max": 110000,
+      "currency": "USD",
+      "languages_required": ["en"],
+      "quality_flags": ["clear_jd", "has_requirements", "has_tech_stack"],
+      "confidence": 0.87
+    }
+  }
+}
