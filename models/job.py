@@ -461,6 +461,16 @@ class RawJob(BaseModel):
     original_language: str | None = None
     external_id: str | None = None
 
+    @field_validator("salary_min", "salary_max", mode="before")
+    @classmethod
+    def coerce_salary_to_int(cls, v: object) -> int | None:
+        if v is None:
+            return None
+        try:
+            return int(float(str(v)))
+        except (TypeError, ValueError):
+            return None
+
 
 # ---------------------------------------------------------------------------
 # Helpers

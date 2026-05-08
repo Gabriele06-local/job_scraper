@@ -3,22 +3,31 @@
 from __future__ import annotations
 
 import itertools
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 
 from connectors.lever import LeverConnector
 
 
-def _mock_response(payload: list | dict) -> MagicMock:
-    resp = MagicMock()
-    resp.status_code = 200
+def _mock_httpx_response(payload: list | dict, status: int = 200) -> MagicMock:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = status
     resp.json.return_value = payload
     resp.raise_for_status.return_value = None
+    if status >= 400:
+        resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "", request=MagicMock(), response=resp
+        )
     return resp
 
 
 def test_lever_empty_postings() -> None:
-    with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response([])
+    with patch("httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=_mock_httpx_response([]))
         c = LeverConnector()
         c._companies = [{"name": "Test", "slug": "test"}]
         jobs = list(c.fetch())
@@ -40,8 +49,11 @@ def test_lever_yields_dicts() -> None:
             "createdAt": 1712000000000,
         }
     ]
-    with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response(payload)
+    with patch("httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=_mock_httpx_response(payload))
         c = LeverConnector()
         c._companies = [{"name": "Test", "slug": "test"}]
         jobs = list(itertools.islice(c.fetch(), 5))
@@ -51,8 +63,11 @@ def test_lever_yields_dicts() -> None:
 
 
 def test_lever_no_crash_on_http_error() -> None:
-    with patch("requests.get") as mock_get:
-        mock_get.side_effect = Exception("timeout")
+    with patch("httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(side_effect=httpx.RequestError("timeout"))
         c = LeverConnector()
         c._companies = [{"name": "Test", "slug": "test"}]
         jobs = list(c.fetch())
