@@ -73,6 +73,36 @@ def ensure_indexes() -> None:
     logger.info("mongo.indexes_ready")
 
 
+def _dedupe_field(coll: Collection, field: str) -> int:  # type: ignore[type-arg]
+    """Drop duplicate docs on `field`, keeping the newest by _id.
+
+    Required before creating a unique index: build fails on existing dups.
+    Returns the number of docs deleted.
+    """
+    cursor = coll.aggregate(
+        [
+            {"$match": {field: {"$exists": True, "$ne": None}}},
+            {"$sort": {"_id": -1}},
+            {"$group": {"_id": f"${field}", "ids": {"$push": "$_id"}, "count": {"$sum": 1}}},
+            {"$match": {"count": {"$gt": 1}}},
+        ],
+        allowDiskUse=True,
+    )
+    ids_to_delete: list = []
+    for group in cursor:
+        # Keep first (most recent), drop the rest.
+        ids_to_delete.extend(group["ids"][1:])
+    if not ids_to_delete:
+        return 0
+    result = coll.delete_many({"_id": {"$in": ids_to_delete}})
+    logger.warning(
+        "mongo.dedupe_before_index",
+        field=field,
+        deleted=result.deleted_count,
+    )
+    return result.deleted_count
+
+
 def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
     jobs = db["jobs"]
     indexes = [
@@ -118,6 +148,10 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
         for name in ("url_unique", "dedup_hash_unique", "text_index"):
             if name in existing:
                 jobs.drop_index(name)
+        # Unique-index build aborts on pre-existing dups (see prod failure
+        # 2026-05-15: E11000 on url_unique). Dedupe first.
+        _dedupe_field(jobs, "url")
+        _dedupe_field(jobs, "dedup_hash")
         jobs.create_indexes(indexes)
         logger.info("mongo.jobs_indexes_created")
     except OperationFailure as e:
@@ -142,6 +176,7 @@ def _ensure_companies_indexes(db: Database) -> None:  # type: ignore[type-arg]
         existing = {idx["name"] for idx in companies.list_indexes()}
         if "name_normalized_unique" in existing:
             companies.drop_index("name_normalized_unique")
+        _dedupe_field(companies, "name_normalized")
         companies.create_indexes(indexes)
         logger.info("mongo.companies_indexes_created")
     except OperationFailure as e:
