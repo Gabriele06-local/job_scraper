@@ -1,12 +1,19 @@
-"""Import run tracking — persists per-provider run records to MongoDB.
+"""Import run tracking — per-provider child of `import_reports`.
 
-Collection: import_runs
-Auto-disable logic: 3 consecutive failures → sets REGISTRY entry disabled.
+Collection: `import_runs`
+Schema: see SDD §I.2 (LOCKED CONTRACT — backend Prisma model depends on it).
+Auto-disable logic: 3 consecutive failures → caller flips the REGISTRY entry.
+
+Migration note: the new fields (report_id, language_target, passed_quality_gate,
+failure_reasons, avg_enrichment_ms, errors, quality_score, connector_crashed,
+crash_reason, soft_404_count, url_invalid_count) all have defaults; readers
+must treat absent keys as None / 0 / {} for backward-compat with pre-existing
+documents (no backfill).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
@@ -18,10 +25,13 @@ log = structlog.get_logger(__name__)
 
 _COLLECTION = "import_runs"
 _MAX_CONSECUTIVE_FAILURES = 3
+_MAX_ERRORS = 100
 
 
 @dataclass
 class ImportRunRecord:
+    """Per-source run record. SDD §I.2."""
+
     provider_name: str
     started_at: datetime
     completed_at: datetime | None = None
@@ -31,6 +41,18 @@ class ImportRunRecord:
     jobs_duplicated: int = 0
     status: Literal["success", "partial", "failed"] = "failed"
     error_message: str | None = None
+    # ----- SDD §I.2 additions ------------------------------------------------
+    report_id: str | None = None
+    language_target: str | None = None
+    passed_quality_gate: int = 0
+    failure_reasons: dict[str, int] = field(default_factory=dict)
+    avg_enrichment_ms: float = 0.0
+    errors: list[str] = field(default_factory=list)
+    quality_score: float = 0.0
+    connector_crashed: bool = False
+    crash_reason: str | None = None
+    soft_404_count: int = 0
+    url_invalid_count: int = 0
 
     def to_doc(self) -> dict:
         return {
@@ -43,11 +65,23 @@ class ImportRunRecord:
             "jobs_duplicated": self.jobs_duplicated,
             "status": self.status,
             "error_message": self.error_message,
+            # SDD §I.2
+            "report_id": self.report_id,
+            "language_target": self.language_target,
+            "passed_quality_gate": self.passed_quality_gate,
+            "failure_reasons": dict(self.failure_reasons),
+            "avg_enrichment_ms": float(self.avg_enrichment_ms),
+            "errors": list(self.errors[:_MAX_ERRORS]),
+            "quality_score": float(self.quality_score),
+            "connector_crashed": bool(self.connector_crashed),
+            "crash_reason": self.crash_reason,
+            "soft_404_count": int(self.soft_404_count),
+            "url_invalid_count": int(self.url_invalid_count),
         }
 
 
 class ImportRunTracker:
-    """Persists ImportRunRecord to MongoDB and checks auto-disable threshold."""
+    """Persists ImportRunRecord and exposes auto-disable inspection helpers."""
 
     def __init__(self, db: pymongo.MongoClient) -> None:  # type: ignore[type-arg]
         self._col: Collection = db[_COLLECTION]  # type: ignore[type-arg]
@@ -57,6 +91,8 @@ class ImportRunTracker:
         self._col.create_index(
             [("provider_name", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)]
         )
+        # SDD §I.2 — new index supporting `import_reports` $lookup joins.
+        self._col.create_index([("report_id", pymongo.ASCENDING)])
 
     def save(self, record: ImportRunRecord) -> None:
         try:
