@@ -114,7 +114,9 @@ class TestPipelineBasicFlow:
         assert result.counters.ai_classified == 1
         assert result.counters.gate_valid == 1
         assert result.counters.persisted == 1
-        assert jobs_collection.count_documents({"status": "valid"}) == 1
+        # SDD §I.4 — ACTIVE with quality_tier=valid replaces legacy status=valid.
+        assert jobs_collection.count_documents({"status": "active"}) == 1
+        assert jobs_collection.count_documents({"quality_tier": "valid"}) == 1
 
     def test_prefilter_rejected_not_classified(self, jobs_collection):
         # Empty description → prefilter reject
@@ -188,8 +190,8 @@ class TestPipelineDedupe:
         raw = _raw()
         pipeline.run([raw, raw])
 
-        # Any accepted status (valid or premium) is fine here
-        doc = jobs_collection.find_one({"status": {"$in": ["valid", "premium"]}})
+        # SDD §I.4 — any accepted job is ACTIVE; tier captured in quality_tier.
+        doc = jobs_collection.find_one({"status": "active"})
         assert doc is not None
         # seen_count should be 1 from merge
         assert doc.get("seen_count", 0) == 1
@@ -225,7 +227,7 @@ class TestPipelineAIUnavailable:
         doc = jobs_collection.find_one({})
         assert doc is not None
         assert doc["status"] == "rejected_quality"
-        assert doc["reject_reason"] == "AI_UNAVAILABLE"
+        assert doc["reject_reason"] == "AI_CLASSIFICATION_FAILED"
 
     def test_ai_unavailable_counts_correctly(self, jobs_collection, companies_collection):
         mock_clf = MagicMock()
@@ -269,14 +271,15 @@ class TestPipelineQualityGate:
 
         assert result.counters.gate_premium == 1
         doc = jobs_collection.find_one({})
-        assert doc["status"] == "premium"
+        assert doc["status"] == "active"  # SDD §I.4
+        assert doc["quality_tier"] == "premium"
 
     def test_quality_score_stored_in_db(self, jobs_collection):
         pipeline = _make_pipeline(jobs_collection)
         pipeline.run([_raw()])
 
-        # valid or premium — both have quality_score
-        doc = jobs_collection.find_one({"status": {"$in": ["valid", "premium"]}})
+        # SDD §I.4 — accepted jobs are ACTIVE (tier on quality_tier).
+        doc = jobs_collection.find_one({"status": "active"})
         assert doc is not None
         assert doc.get("quality_score", 0) > 0
 
@@ -402,7 +405,7 @@ class TestCompanyLinking:
         pipeline.run([_raw(company_name="Acme Corp")])
 
         company = companies_collection.find_one({})
-        job = jobs_collection.find_one({"status": {"$in": ["valid", "premium"]}})
+        job = jobs_collection.find_one({"status": "active"})
         assert job is not None
         assert str(job["company_id"]) == str(company["_id"])
 
