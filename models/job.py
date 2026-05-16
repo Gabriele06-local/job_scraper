@@ -15,7 +15,6 @@ from enum import Enum
 from typing import Any
 
 from bson import ObjectId
-
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
@@ -34,11 +33,26 @@ class Language(str, Enum):
 
 
 class JobStatus(str, Enum):
-    VALID = "valid"
-    PREMIUM = "premium"
+    """Lifecycle status — public listing vocabulary (SDD §I.4).
+
+    Old `VALID`/`PREMIUM` values were collapsed into `ACTIVE`. The premium/valid
+    distinction now lives on `JobQuality.quality_tier` (see QualityTier).
+    Migration: scripts/migrate_status_vocab.py rewrites legacy rows.
+    """
+
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    CLOSED = "closed"
+    DRAFT = "draft"
     REJECTED_QUALITY = "rejected_quality"
     REJECTED_PREFILTER = "rejected_prefilter"
-    EXPIRED = "expired"
+
+
+class QualityTier(str, Enum):
+    """Quality tier sub-classification for ACTIVE jobs (SDD §D.1)."""
+
+    VALID = "valid"
+    PREMIUM = "premium"
 
 
 class RemoteMode(str, Enum):
@@ -200,9 +214,17 @@ class JobClassification(BaseModel):
 
 
 class JobQuality(BaseModel):
-    """Quality gate output (flattened to top-level in MongoDB)."""
+    """Quality gate output (flattened to top-level in MongoDB).
+
+    quality_tier: VALID|PREMIUM only when status == ACTIVE (SDD §D.1).
+    geocode_pending: True when raw location present but coordinates missing —
+        the soft-path keeps the job ACTIVE and a separate `geocode` CLI run
+        backfills coordinates later (SDD §A.5 soft-path / §A.8).
+    """
 
     quality_score: int = 0  # 0-100
+    quality_tier: QualityTier | None = None
+    geocode_pending: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +258,7 @@ class Job(BaseModel):
     enriched_by_ai: bool = False
 
     # Lifecycle
-    status: JobStatus = JobStatus.VALID
+    status: JobStatus = JobStatus.ACTIVE
     reject_reason: str | None = None
     posted_at: datetime
     first_seen_at: datetime = Field(default_factory=_now_utc)
@@ -334,8 +356,22 @@ class Job(BaseModel):
             "salary_max": self.salary.max if self.salary.max is not None else cl.salary_max,
             "currency": self.salary.currency or cl.currency,
             "salary_period": self.salary.period,
-            # Quality (flattened)
+            # Quality (flattened — nested mirror kept for backend Prisma reads)
             "quality_score": self.quality.quality_score,
+            "quality_tier": (
+                self.quality.quality_tier.value
+                if self.quality.quality_tier is not None
+                else None
+            ),
+            "quality": {
+                "quality_score": self.quality.quality_score,
+                "quality_tier": (
+                    self.quality.quality_tier.value
+                    if self.quality.quality_tier is not None
+                    else None
+                ),
+                "geocode_pending": self.quality.geocode_pending,
+            },
             # Legacy
             "seniority_id": self.seniority_id,
             # Counters
@@ -438,9 +474,9 @@ class Job(BaseModel):
                 ai_model=doc.get("ai_model", ""),
                 ai_call_at=doc.get("ai_call_at"),
             ),
-            quality=JobQuality(quality_score=int(doc.get("quality_score", 0))),
+            quality=_quality_from_doc(doc),
             enriched_by_ai=bool(doc.get("enriched_by_ai", False)),
-            status=_safe_enum(JobStatus, doc.get("status"), JobStatus.VALID),
+            status=_safe_enum(JobStatus, doc.get("status"), JobStatus.ACTIVE),
             reject_reason=doc.get("reject_reason"),
             posted_at=doc.get("posted_at") or doc.get("published_at") or _now_utc(),
             first_seen_at=doc.get("first_seen_at", _now_utc()),
@@ -515,3 +551,17 @@ def _safe_enum(enum_cls: type, value: Any, default: Any) -> Any:
         return enum_cls(value)
     except ValueError:
         return default
+
+
+def _quality_from_doc(doc: dict[str, Any]) -> JobQuality:
+    """Reconstruct JobQuality preferring nested `quality.*` over flat fields."""
+    nested = doc.get("quality") if isinstance(doc.get("quality"), dict) else {}
+    score = nested.get("quality_score", doc.get("quality_score", 0)) or 0
+    tier_raw = nested.get("quality_tier", doc.get("quality_tier"))
+    tier = _safe_enum(QualityTier, tier_raw, None) if tier_raw else None
+    geocode_pending = bool(nested.get("geocode_pending", doc.get("geocode_pending", False)))
+    return JobQuality(
+        quality_score=int(score),
+        quality_tier=tier,
+        geocode_pending=geocode_pending,
+    )

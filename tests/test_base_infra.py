@@ -68,9 +68,11 @@ def test_language_enum_values():
 
 
 def test_job_status_enum_values():
-    assert JobStatus.VALID.value == "valid"
-    assert JobStatus.PREMIUM.value == "premium"
+    # SDD §I.4 — `valid`/`premium` collapsed into `active` + quality_tier.
+    assert JobStatus.ACTIVE.value == "active"
+    assert JobStatus.EXPIRED.value == "expired"
     assert JobStatus.REJECTED_PREFILTER.value == "rejected_prefilter"
+    assert JobStatus.REJECTED_QUALITY.value == "rejected_quality"
 
 
 def test_remote_mode_enum():
@@ -200,7 +202,7 @@ def test_job_to_mongo_doc_enum_values_are_strings():
     assert doc["remote_mode"] == "remote"
     assert doc["remote"] is True
     assert doc["language"] == "en"
-    assert doc["status"] == "valid"
+    assert doc["status"] == "active"  # SDD §I.4 default — was "valid" pre-D.1
 
 
 def test_job_to_mongo_doc_company_nested():

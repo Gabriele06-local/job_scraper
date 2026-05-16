@@ -1,9 +1,40 @@
 """Groq client wrapper for single-call job classification.
 
-Retry: 3-attempt loop, exp backoff. JSON/validation errors → corrective hint on re-prompt.
-Rate limit: client-side token bucket (GROQ_RPM env).
-Logging: tokens in/out, latency per call.
-Cost: cumulative tracker emitted at run end.
+Retry semantics (three nested layers — keep them in mind when debugging):
+
+1. **API-level retry** (`classify` loop): 3 attempts with exponential backoff +
+   jitter on `RateLimitError`, `APITimeoutError`, `InternalServerError`. JSON
+   parse / Pydantic validation errors trigger a corrective-hint re-prompt
+   (the next attempt prepends "Your previous response was invalid. Error: ...").
+
+2. **Confidence-level retry** (SDD §A.7): when the first successful call
+   returns `ai_confidence < _DEFAULT_CONFIDENCE_THRESHOLD` and we have not
+   already retried, we issue a second call with a `retry_with_hints` variant
+   that explicitly tells the model:
+
+       "If a field is genuinely unknowable from the text, return the literal
+        string 'unknown'. Do not invent values to raise confidence."
+
+   The retried result is returned even when its confidence is still low — the
+   downstream `quality_gate` is the authority on rejection (`<0.7` reject,
+   `>=0.85` premium-eligible).
+
+3. **Tenacity decorator** (`_call_with_retry`): legacy free-form interface
+   used by `classify_job(text)`. Same API-retry policy as (1).
+
+Prompt structure (SPEC 02 §4):
+  * System prompt is constant and cache-friendly — DO NOT mutate it per
+    request, otherwise Groq's prompt cache won't kick in.
+  * User prompt has two variants:
+      `_build_structured_prompt` — preferred; fields (title/company/location/
+          language/description) carried in named blocks so the model can't
+          confuse them.
+      `_build_user_prompt` — legacy free-form; kept for `classify_job(text)`.
+  * Description is hard-capped at 4000 chars to keep token spend predictable.
+
+Rate limit: client-side token bucket (`GROQ_RPM` env, default 50 req/min).
+Logging: tokens in/out + latency per call (`groq.call`); cumulative cost
+emitted at run end (`pipeline.run_complete`).
 """
 
 from __future__ import annotations
@@ -40,6 +71,16 @@ logger = structlog.get_logger(__name__)
 # Groq llama-3.1-8b-instant pricing (USD per 1M tokens, 2025 rates)
 _INPUT_PRICE_PER_1M: float = 0.05
 _OUTPUT_PRICE_PER_1M: float = 0.08
+
+# SDD §A.7 — retry-on-low-confidence threshold (mirrors quality_gate default).
+_DEFAULT_CONFIDENCE_THRESHOLD: float = 0.7
+
+# Hint appended on the confidence-retry call.
+_RETRY_HINT: str = (
+    "If a field is genuinely unknowable from the text, return the literal "
+    "string 'unknown' (or null where the schema allows). Do not invent values "
+    "to raise confidence."
+)
 
 # SPEC 02 §5 — strict schema sent in prompt + Pydantic guard (defense in depth)
 _CLASSIFICATION_SCHEMA: dict[str, Any] = {
@@ -276,18 +317,50 @@ class GroqClassifier:
         self._client = client or groq.Groq(api_key=settings.groq_api_key)
         self._rate_limiter = _RateLimiter(settings.groq_rpm)
 
-    def classify(self, job_raw: dict[str, Any]) -> JobClassification | None:
-        """Classify a job from raw dict (SPEC 02 §4 structured prompt).
+    def classify(
+        self, job_raw: dict[str, Any], *, _retry: bool = False
+    ) -> JobClassification | None:
+        """Classify a job from raw dict (SPEC 02 §4 structured prompt + SDD §A.7).
+
+        Performs one full classification call. If the returned confidence is
+        below `_DEFAULT_CONFIDENCE_THRESHOLD` and we haven't retried yet, issues
+        a second call with the `retry_with_hints` variant (see module docstring).
 
         Args:
             job_raw: Dict with keys title, company_name, location_raw,
-                     detected_language, description. url used for logging.
+                     detected_language, description. `url` is used for logging.
+            _retry: Internal flag — set True on the recursive retry call to
+                    prevent infinite recursion.
 
         Returns:
             JobClassification on success, None on persistent failure (caller
-            marks reject_reason=AI_UNAVAILABLE per SPEC 03 §4.3).
+            marks reject_reason=AI_CLASSIFICATION_FAILED per SDD §I.3).
         """
-        correction = ""
+        result = self._call_groq(job_raw, hint="")
+        if result is None:
+            return None
+        if not _retry and result.ai_confidence < _DEFAULT_CONFIDENCE_THRESHOLD:
+            logger.info(
+                "groq.confidence_retry",
+                first_confidence=round(result.ai_confidence, 2),
+                threshold=_DEFAULT_CONFIDENCE_THRESHOLD,
+                url=job_raw.get("url", ""),
+            )
+            retried = self._call_groq(job_raw, hint=_RETRY_HINT)
+            if retried is not None:
+                return retried
+        return result
+
+    def _call_groq(
+        self, job_raw: dict[str, Any], *, hint: str = ""
+    ) -> JobClassification | None:
+        """Single classification round-trip with 3 API-level retries.
+
+        On `RateLimitError`/`APITimeoutError`/`InternalServerError` we backoff and
+        retry; on JSON / Pydantic validation errors we re-prompt with a
+        corrective hint. After 3 failed attempts returns None.
+        """
+        correction = hint
         for attempt in range(1, 4):
             try:
                 prompt = _build_structured_prompt(

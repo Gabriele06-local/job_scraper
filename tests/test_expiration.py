@@ -78,22 +78,23 @@ class TestRedirectIsExpired:
 
 class TestBodyMatchesExpiry:
     def test_english_no_longer_available(self):
-        assert _body_matches_expiry("any_source", "This job is no longer available")
+        # SDD §A.2 — phrase library uses "this position is no longer available"
+        assert _body_matches_expiry("any_source", "This position is no longer available")
 
     def test_english_position_filled(self):
-        assert _body_matches_expiry("any_source", "This position has been filled.")
+        assert _body_matches_expiry("any_source", "This role has been filled now.")
 
     def test_italian_annuncio_scaduto(self):
         assert _body_matches_expiry("any_source", "Annuncio scaduto - non disponibile")
 
     def test_french_offre_expiree(self):
-        assert _body_matches_expiry("any_source", "Cette offre a expir depuis 3 jours")
+        assert _body_matches_expiry("any_source", "Cette offre expirée depuis 3 jours")
 
     def test_spanish_oferta_cerrada(self):
         assert _body_matches_expiry("any_source", "Oferta cerrada el 01/05/2026")
 
     def test_german_stelle_nicht_mehr(self):
-        assert _body_matches_expiry("any_source", "Diese Stelle ist nicht mehr verfügbar")
+        assert _body_matches_expiry("any_source", "Diese stelle nicht mehr verfügbar")
 
     def test_long_body_no_match(self):
         long_body = "a" * 600  # > 500 chars, no pattern
