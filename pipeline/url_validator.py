@@ -68,10 +68,12 @@ class PrePipelineURLValidator:
     ) -> None:
         self._timeout_s = timeout_s
         self._per_host = per_host_concurrency
-        self._global_sem = asyncio.Semaphore(global_concurrency)
-        self._host_sems: dict[str, asyncio.Semaphore] = defaultdict(
-            lambda: asyncio.Semaphore(per_host_concurrency)
-        )
+        self._global_concurrency = global_concurrency
+        # Semaphores must be created inside a running loop (py3.10+ removed
+        # auto-create behaviour; py3.8 on prod raises the same error when no
+        # loop is set in MainThread). Build them lazily in validate_many.
+        self._global_sem: asyncio.Semaphore | None = None
+        self._host_sems: dict[str, asyncio.Semaphore] | None = None
         self._user_agent = user_agent or _DEFAULT_USER_AGENT
 
     async def validate_many(self, urls: list[str]) -> dict[str, URLValidationResult]:
@@ -83,10 +85,16 @@ class PrePipelineURLValidator:
         if not unique:
             return {}
 
+        if self._global_sem is None:
+            self._global_sem = asyncio.Semaphore(self._global_concurrency)
+        if self._host_sems is None:
+            per_host = self._per_host
+            self._host_sems = defaultdict(lambda: asyncio.Semaphore(per_host))
+
         headers = {"User-Agent": self._user_agent}
         limits = httpx.Limits(
-            max_connections=self._global_sem._value,  # noqa: SLF001 — public API absent
-            max_keepalive_connections=max(2, self._global_sem._value // 2),  # noqa: SLF001
+            max_connections=self._global_concurrency,
+            max_keepalive_connections=max(2, self._global_concurrency // 2),
         )
 
         async with httpx.AsyncClient(
