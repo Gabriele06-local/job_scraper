@@ -85,10 +85,11 @@ def main(argv: list[str] | None = None) -> int:
     log.info("migrate.start", dry_run=args.dry_run, before=_count_legacy(jobs_col))
     try:
         result = _migrate(jobs_col, dry_run=args.dry_run)
+        after = _count_legacy(jobs_col)
     finally:
         close_client()
 
-    log.info("migrate.done", **result, after=_count_legacy(jobs_col))
+    log.info("migrate.done", **result, after=after)
     return 0
 
 
