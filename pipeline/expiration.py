@@ -119,9 +119,11 @@ class ExpirationChecker:
         cutoff_24h = now - timedelta(hours=24)
         cutoff_age = now - timedelta(days=effective_max_age)
 
-        # 1. Mark max-age jobs expired without probing
+        # 1. Mark max-age jobs expired without probing.
+        # SDD §I.4: status vocab is `active`; legacy `valid`/`premium` kept for
+        # backward-compat with un-migrated databases (D.1).
         old_filter = {
-            "status": {"$in": ["valid", "premium"]},
+            "status": {"$in": ["active", "valid", "premium"]},
             "posted_at": {"$lt": cutoff_age},
             "$or": [
                 {"last_probed_at": None},
@@ -145,9 +147,9 @@ class ExpirationChecker:
         else:
             c.max_age_expired = self._jobs_col.count_documents(old_filter)
 
-        # 2. Pick jobs due for probing
+        # 2. Pick jobs due for probing (SDD §I.4 — accept both vocabularies).
         probe_filter = {
-            "status": {"$in": ["valid", "premium"]},
+            "status": {"$in": ["active", "valid", "premium"]},
             "$or": [
                 {"last_probed_at": None},
                 {"last_probed_at": {"$exists": False}},

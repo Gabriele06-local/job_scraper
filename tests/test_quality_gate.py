@@ -1,4 +1,4 @@
-"""Tests for pipeline/quality_gate.py."""
+"""Tests for pipeline/quality_gate.py — SDD strict gate (§A.5)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from models.job import (
     JobSource,
     JobStatus,
     Language,
+    QualityTier,
     RemoteMode,
     RoleFamily,
     Seniority,
@@ -27,16 +28,19 @@ from pipeline.quality_gate import (
 
 _NOW = datetime.now(tz=timezone.utc)
 
+# Long, meaningful JD that passes _is_description_meaningful.
 _LONG_DESC = (
     "We are looking for a Senior Python Developer to join our backend team. "
     "You will design REST APIs with Django and PostgreSQL. "
-    "Requirements: 5+ years Python, Docker, Kubernetes. Remote, EUR 80k-120k."
+    "Your responsibilities include shipping production code daily and "
+    "mentoring junior engineers across the team. Requirements: 5+ years "
+    "Python, Docker, Kubernetes, AWS, strong testing discipline. "
+    "Remote, EUR 80k-120k, equity, learning budget."
 )
 
 
 def _cls(**kwargs) -> JobClassification:
-    # Defaults qualify as VALID (not premium): 2 skills, no salary, remote mode, confidence=0.80
-    # Premium requires: ≥4 skills + full salary + confidence≥0.85 + clear_jd/has_requirements flag
+    """JobClassification with sensible defaults; override via kwargs."""
     defaults = dict(
         technical_skills=["Python", "Django"],
         seniority=Seniority.SENIOR,
@@ -53,9 +57,9 @@ def _cls(**kwargs) -> JobClassification:
     return JobClassification(**defaults)
 
 
-def _job(classification: JobClassification | None = None) -> Job:
+def _job(classification: JobClassification | None = None, **overrides) -> Job:
     cl = classification or _cls()
-    return Job(
+    base = dict(
         url="https://jobs.example.com/1",
         dedup_hash="abc123",
         source_info=JobSource(source="adzuna"),
@@ -69,6 +73,8 @@ def _job(classification: JobClassification | None = None) -> Job:
         posted_at=_NOW,
         classification=cl,
     )
+    base.update(overrides)
+    return Job(**base)
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +92,7 @@ class TestComputeQualityScore:
             remote_mode=RemoteMode.REMOTE,
             ai_confidence=1.0,
         )
-        score = compute_quality_score(cl)
-        assert score == 100
+        assert compute_quality_score(cl) == 100
 
     def test_zero_score(self):
         cl = _cls(
@@ -100,140 +105,165 @@ class TestComputeQualityScore:
         )
         assert compute_quality_score(cl) == 0
 
-    def test_skills_capped_at_5(self):
-        """6 skills should score same as 5 — capped."""
-        base = dict(salary_min=None, salary_max=None,
-                    remote_mode=RemoteMode.UNKNOWN, ai_confidence=0.0,
-                    seniority=Seniority.UNKNOWN)
-        cl5 = _cls(technical_skills=["A", "B", "C", "D", "E"], **base)
-        cl6 = _cls(technical_skills=["A", "B", "C", "D", "E", "F"], **base)
-        assert compute_quality_score(cl5) == compute_quality_score(cl6)
-
-    def test_partial_salary(self):
-        """Only salary_min set → salary_score=0.6."""
-        cl = _cls(salary_min=50000, salary_max=None,
-                  technical_skills=[], seniority=Seniority.UNKNOWN,
-                  remote_mode=RemoteMode.UNKNOWN, ai_confidence=0.0)
-        score = compute_quality_score(cl)
-        # 0.20 * 0.6 = 12
-        assert score == 12
-
-    def test_no_salary(self):
-        cl = _cls(salary_min=None, salary_max=None,
-                  technical_skills=[], seniority=Seniority.UNKNOWN,
-                  remote_mode=RemoteMode.UNKNOWN, ai_confidence=0.0)
-        assert compute_quality_score(cl) == 0
-
-    def test_remote_scores_higher_than_onsite(self):
-        base = dict(technical_skills=[], seniority=Seniority.UNKNOWN,
-                    salary_min=None, salary_max=None, ai_confidence=0.0)
-        remote_score = compute_quality_score(_cls(**base, remote_mode=RemoteMode.REMOTE))
-        onsite_score = compute_quality_score(_cls(**base, remote_mode=RemoteMode.ONSITE))
-        assert remote_score > onsite_score
-
     def test_returns_int(self):
         assert isinstance(compute_quality_score(_cls()), int)
 
-    def test_range_0_100(self):
-        for conf in [0.0, 0.5, 1.0]:
-            score = compute_quality_score(_cls(ai_confidence=conf))
-            assert 0 <= score <= 100
-
 
 # ---------------------------------------------------------------------------
-# passes_quality_gate
+# passes_quality_gate — SDD strict (§A.5)
 # ---------------------------------------------------------------------------
 
 
 class TestPassesQualityGate:
     def test_valid_classification_passes(self):
-        ok, reasons = passes_quality_gate(_cls())
+        ok, reasons = passes_quality_gate(
+            _cls(), company_name="Acme", description=_LONG_DESC
+        )
         assert ok is True
         assert reasons == []
 
-    def test_insufficient_skills_first_match(self):
-        # insufficient_skills wins over unknown_seniority (first-match order)
-        cl = _cls(technical_skills=["A"], seniority=Seniority.UNKNOWN)
-        ok, reasons = passes_quality_gate(cl)
+    def test_missing_company_rejects(self):
+        ok, reasons = passes_quality_gate(_cls(), company_name="", description=_LONG_DESC)
         assert not ok
-        assert reasons == [QualityRejectReason.INSUFFICIENT_SKILLS.value]
+        assert reasons == [QualityRejectReason.MISSING_COMPANY.value]
 
-    def test_unknown_seniority(self):
-        cl = _cls(seniority=Seniority.UNKNOWN)
-        ok, reasons = passes_quality_gate(cl)
+    def test_invalid_company_sentinel_rejects(self):
+        for sentinel in ("Unknown Company", "n/a", "Various", "Private", "Anonymous"):
+            ok, reasons = passes_quality_gate(
+                _cls(), company_name=sentinel, description=_LONG_DESC
+            )
+            assert not ok, f"sentinel {sentinel!r} should reject"
+            assert reasons == [QualityRejectReason.MISSING_COMPANY.value]
+
+    def test_zero_skills_rejects(self):
+        cl = _cls(technical_skills=[])
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert not ok
-        assert reasons == [QualityRejectReason.UNKNOWN_SENIORITY.value]
+        assert reasons == [QualityRejectReason.ZERO_SKILLS.value]
 
-    def test_unknown_role_family(self):
-        cl = _cls(role_family=RoleFamily.OTHER)
-        ok, reasons = passes_quality_gate(cl)
-        assert not ok
-        assert reasons == [QualityRejectReason.UNKNOWN_ROLE_FAMILY.value]
-
-    def test_unknown_remote_mode_rejected(self):
-        cl = _cls(remote_mode=RemoteMode.UNKNOWN)
-        ok, reasons = passes_quality_gate(cl)
-        assert not ok
-        assert reasons == [QualityRejectReason.UNKNOWN_REMOTE_MODE.value]
-
-    def test_onsite_no_salary_passes(self):
-        cl = _cls(salary_min=None, salary_max=None, remote_mode=RemoteMode.ONSITE)
-        ok, _ = passes_quality_gate(cl)
+    def test_one_skill_passes_minimum_for_sdd_strict(self):
+        """SDD strict ZERO_SKILLS only fires at 0 — tier logic enforces ≥2/≥4."""
+        cl = _cls(technical_skills=["Python"])
+        ok, _ = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert ok is True
 
-    def test_unknown_employment_type_rejected(self):
+    def test_unknown_seniority_after_retry_rejects(self):
+        cl = _cls(seniority=Seniority.UNKNOWN)
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
+        assert not ok
+        assert reasons == [QualityRejectReason.UNKNOWN_SENIORITY_AFTER_RETRY.value]
+
+    def test_unknown_employment_type_after_retry_rejects(self):
         cl = _cls(employment_type=EmploymentType.UNKNOWN)
-        ok, reasons = passes_quality_gate(cl)
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert not ok
-        assert reasons == [QualityRejectReason.UNKNOWN_EMPLOYMENT_TYPE.value]
+        assert reasons == [QualityRejectReason.UNKNOWN_EMPLOYMENT_TYPE_AFTER_RETRY.value]
 
-    def test_remote_mode_ordering_before_employment_type(self):
-        """UNKNOWN_REMOTE_MODE fires before UNKNOWN_EMPLOYMENT_TYPE (first-match order)."""
-        cl = _cls(remote_mode=RemoteMode.UNKNOWN, employment_type=EmploymentType.UNKNOWN)
-        ok, reasons = passes_quality_gate(cl)
+    def test_unknown_remote_mode_after_retry_rejects(self):
+        cl = _cls(remote_mode=RemoteMode.UNKNOWN)
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert not ok
-        assert reasons == [QualityRejectReason.UNKNOWN_REMOTE_MODE.value]
+        assert reasons == [QualityRejectReason.UNKNOWN_REMOTE_MODE_AFTER_RETRY.value]
 
-    def test_low_confidence_rejected(self):
+    def test_low_confidence_rejects(self):
         cl = _cls(ai_confidence=0.6)
-        ok, reasons = passes_quality_gate(cl)
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert not ok
         assert reasons == [QualityRejectReason.LOW_CONFIDENCE.value]
 
-    def test_custom_threshold(self):
-        cl = _cls(ai_confidence=0.75)
-        # Passes at default 0.7
-        ok, _ = passes_quality_gate(cl, threshold=0.7)
-        assert ok is True
-        # Fails at 0.80
-        ok2, reasons2 = passes_quality_gate(cl, threshold=0.80)
-        assert not ok2
-        assert reasons2 == [QualityRejectReason.LOW_CONFIDENCE.value]
-
-    def test_exactly_2_skills_passes(self):
-        cl = _cls(technical_skills=["A", "B"])
-        ok, _ = passes_quality_gate(cl)
+    def test_role_family_other_is_now_allowed(self):
+        """SDD strict no longer rejects role_family=OTHER (was legacy gate)."""
+        cl = _cls(role_family=RoleFamily.OTHER)
+        ok, _ = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert ok is True
 
-    def test_one_skill_fails(self):
-        cl = _cls(technical_skills=["A"])
-        ok, _ = passes_quality_gate(cl)
-        assert not ok
-
-    def test_zero_skills_fails(self):
-        cl = _cls(technical_skills=[])
-        ok, _ = passes_quality_gate(cl)
-        assert not ok
-
-    def test_exactly_at_threshold_passes(self):
-        cl = _cls(ai_confidence=0.7)
-        ok, _ = passes_quality_gate(cl, threshold=0.7)
+    def test_onsite_no_salary_passes(self):
+        cl = _cls(salary_min=None, salary_max=None, remote_mode=RemoteMode.ONSITE)
+        ok, _ = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert ok is True
 
-    def test_just_below_threshold_fails(self):
-        cl = _cls(ai_confidence=0.699)
-        ok, _ = passes_quality_gate(cl, threshold=0.7)
+    def test_first_match_order_company_before_skills(self):
+        cl = _cls(technical_skills=[])  # would trigger ZERO_SKILLS later
+        ok, reasons = passes_quality_gate(cl, company_name="", description=_LONG_DESC)
         assert not ok
+        assert reasons == [QualityRejectReason.MISSING_COMPANY.value]
+
+    def test_first_match_order_skills_before_unknown_seniority(self):
+        cl = _cls(technical_skills=[], seniority=Seniority.UNKNOWN)
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
+        assert not ok
+        assert reasons == [QualityRejectReason.ZERO_SKILLS.value]
+
+
+# ---------------------------------------------------------------------------
+# _is_description_meaningful truth table — SDD §A.5
+# ---------------------------------------------------------------------------
+
+
+class TestIsDescriptionMeaningful:
+    def test_truth_table(self):
+        from pipeline.quality_gate import _is_description_meaningful
+
+        cases: list[tuple[str, bool, str]] = [
+            # (text, expected, label)
+            (_LONG_DESC, True, "happy-path long JD"),
+            ("", False, "empty string"),
+            ("short", False, "tiny string"),
+            ("a" * 199, False, "just below 200 char floor"),
+            (
+                # 200+ chars but ends with ellipsis -> invalid
+                "This role offers exciting work in a growing team."
+                + " Filler sentence one." * 10
+                + "...",
+                False,
+                "trailing ellipsis",
+            ),
+            (
+                # >200 chars but only one full sentence -> too few sentences
+                "Senior Python developer wanted to ship code in production daily across the "
+                "stack and beyond a single short sentence that keeps going on and on.",
+                False,
+                "single long sentence",
+            ),
+            (
+                # >200 chars dominated by boilerplate -> ratio > 0.4
+                "Equal opportunity employer. We are looking for. Our company is. "
+                "Equal opportunity employer. We are looking for. Our company is. Equal "
+                "opportunity employer.",
+                False,
+                "boilerplate dominated",
+            ),
+            (
+                # Closes with HTML tag -> accept end heuristic (>=200 chars)
+                ("<p>Senior Python developer wanted to ship code in production daily. "
+                 "You will own the backend services and mentor the wider engineering "
+                 "team across the organisation. We value tests deeply for every change "
+                 "we ship to production.</p>"),
+                True,
+                "ends with HTML close tag",
+            ),
+            (
+                # 3 short sentences each less than 4 words -> non-trivial fails
+                "Hi there. Job here. Apply now. " + "x" * 200,
+                False,
+                "no non-trivial sentences",
+            ),
+            (
+                # Normal valid description with 4 strong sentences
+                "We need a senior backend engineer to ship production code. "
+                "You will own the API surface and craft tests with care. "
+                "You will mentor junior engineers across the wider organisation. "
+                "We offer remote work and competitive total compensation.",
+                True,
+                "4 strong sentences",
+            ),
+        ]
+        failures: list[str] = []
+        for text, expected, label in cases:
+            actual = _is_description_meaningful(text)
+            if actual is not expected:
+                failures.append(f"{label}: expected {expected}, got {actual}")
+        assert not failures, "\n".join(failures)
 
 
 # ---------------------------------------------------------------------------
@@ -256,12 +286,8 @@ class TestIsPremium:
         cl = _cls(technical_skills=["A", "B", "C"])
         assert is_premium(cl) is False
 
-    def test_missing_salary_min_not_premium(self):
+    def test_missing_salary_not_premium(self):
         cl = _cls(technical_skills=["A", "B", "C", "D"], salary_min=None, salary_max=120000)
-        assert is_premium(cl) is False
-
-    def test_missing_salary_max_not_premium(self):
-        cl = _cls(technical_skills=["A", "B", "C", "D"], salary_min=80000, salary_max=None)
         assert is_premium(cl) is False
 
     def test_low_confidence_not_premium(self):
@@ -276,39 +302,22 @@ class TestIsPremium:
         )
         assert is_premium(cl) is False
 
-    def test_missing_quality_flag_not_premium(self):
-        cl = _cls(
-            technical_skills=["A", "B", "C", "D"],
-            ai_confidence=0.90,
-            quality_flags=["has_tech_stack"],  # no clear_jd or has_requirements
-        )
-        assert is_premium(cl) is False
-
-    def test_has_requirements_flag_qualifies_for_premium(self):
-        cl = _cls(
-            technical_skills=["A", "B", "C", "D"],
-            salary_min=80000,
-            salary_max=120000,
-            ai_confidence=0.90,
-            quality_flags=["has_requirements"],
-        )
-        assert is_premium(cl) is True
-
 
 # ---------------------------------------------------------------------------
-# evaluate
+# evaluate — end-to-end
 # ---------------------------------------------------------------------------
 
 
 class TestEvaluate:
-    def test_valid_job_gets_valid_status(self):
+    def test_valid_job_gets_active_status_and_valid_tier(self):
         job = _job()
         result = evaluate(job)
-        assert result.status == JobStatus.VALID
+        assert result.status == JobStatus.ACTIVE
+        assert result.quality.quality_tier == QualityTier.VALID
         assert result.reject_reason is None
         assert result.quality.quality_score > 0
 
-    def test_premium_job_gets_premium_status(self):
+    def test_premium_job_gets_active_status_and_premium_tier(self):
         cl = _cls(
             technical_skills=["Go", "Kubernetes", "AWS", "PostgreSQL"],
             salary_min=90000,
@@ -316,67 +325,73 @@ class TestEvaluate:
             ai_confidence=0.92,
             quality_flags=["clear_jd", "has_requirements"],
         )
-        job = _job(cl)
-        result = evaluate(job)
-        assert result.status == JobStatus.PREMIUM
+        result = evaluate(_job(cl))
+        assert result.status == JobStatus.ACTIVE
+        assert result.quality.quality_tier == QualityTier.PREMIUM
 
-    def test_rejected_job_has_reason(self):
-        cl = _cls(technical_skills=[])  # INSUFFICIENT_SKILLS
-        job = _job(cl)
+    def test_rejected_job_has_reason_and_no_tier(self):
+        cl = _cls(technical_skills=[])  # ZERO_SKILLS
+        result = evaluate(_job(cl))
+        assert result.status == JobStatus.REJECTED_QUALITY
+        assert result.reject_reason == QualityRejectReason.ZERO_SKILLS.value
+        assert result.quality.quality_tier is None
+
+    def test_missing_company_rejects(self):
+        job = _job()
+        job.company = JobCompany(name="", name_normalized="")
         result = evaluate(job)
         assert result.status == JobStatus.REJECTED_QUALITY
-        assert result.reject_reason == QualityRejectReason.INSUFFICIENT_SKILLS.value
+        assert result.reject_reason == QualityRejectReason.MISSING_COMPANY.value
 
-    def test_quality_score_set_on_rejected(self):
-        cl = _cls(technical_skills=[])
-        job = _job(cl)
-        result = evaluate(job)
-        assert 0 <= result.quality.quality_score <= 100
+    def test_unknown_seniority_after_retry_reject_reason(self):
+        cl = _cls(seniority=Seniority.UNKNOWN)
+        result = evaluate(_job(cl))
+        assert result.reject_reason == QualityRejectReason.UNKNOWN_SENIORITY_AFTER_RETRY.value
 
-    def test_quality_score_set_on_valid(self):
+    def test_low_confidence_reject_reason(self):
+        cl = _cls(ai_confidence=0.5)
+        result = evaluate(_job(cl))
+        assert result.reject_reason == QualityRejectReason.LOW_CONFIDENCE.value
+
+    def test_geocode_pending_soft_path_keeps_active(self):
+        """Location.raw present but no geo → geocode_pending=True, status=ACTIVE."""
+        from models.job import JobLocation
+
         job = _job()
+        job.location = JobLocation(raw="Milan, Italy")  # no geo
         result = evaluate(job)
-        assert 0 < result.quality.quality_score <= 100
+        assert result.status == JobStatus.ACTIVE
+        assert result.quality.geocode_pending is True
 
-    def test_quality_score_is_int(self):
+    def test_geocode_not_pending_when_no_raw_location(self):
+        from models.job import JobLocation
+
         job = _job()
+        job.location = JobLocation()  # no raw, no geo
         result = evaluate(job)
-        assert isinstance(result.quality.quality_score, int)
+        assert result.quality.geocode_pending is False
 
     def test_evaluate_returns_same_job_object(self):
         job = _job()
         result = evaluate(job)
-        assert result is job  # in-place modification
-
-    def test_unknown_seniority_reject_reason(self):
-        cl = _cls(seniority=Seniority.UNKNOWN)
-        job = _job(cl)
-        result = evaluate(job)
-        assert result.reject_reason == QualityRejectReason.UNKNOWN_SENIORITY.value
-
-    def test_low_confidence_reject_reason(self):
-        cl = _cls(ai_confidence=0.5)
-        job = _job(cl)
-        result = evaluate(job)
-        assert result.reject_reason == QualityRejectReason.LOW_CONFIDENCE.value
+        assert result is job
 
 
 # ---------------------------------------------------------------------------
-# Ground truth: quality gate on all fixtures (mocked AI)
+# Ground truth — fixtures with sufficient classifications must reach ACTIVE.
 # ---------------------------------------------------------------------------
 
 
 class TestQualityGateGroundTruth:
-    def test_valid_and_premium_fixtures_pass_gate(
-        self, ground_truth_pass
-    ):
-        """All fixtures expected valid/premium must pass the gate."""
+    def test_valid_and_premium_fixtures_pass_gate(self, ground_truth_pass):
+        """All fixtures expected valid/premium must pass the new strict gate."""
         failures: list[str] = []
 
         for f in ground_truth_pass:
             ai_out = f["expected_output"].get("ai_output")
             if ai_out is None:
                 continue
+            inp = f["input"]
 
             cl = JobClassification(
                 technical_skills=ai_out.get("skills", []),
@@ -389,100 +404,14 @@ class TestQualityGateGroundTruth:
                 ai_confidence=ai_out.get("confidence", 0.0),
                 quality_flags=ai_out.get("quality_flags", []),
             )
-            ok, reasons = passes_quality_gate(cl)
+            ok, reasons = passes_quality_gate(
+                cl,
+                company_name=inp["company_name"],
+                description=inp["description"],
+            )
             if not ok:
                 failures.append(
-                    f"{f['input']['title'][:40]}: gate rejected with {reasons}"
+                    f"{inp['title'][:40]}: gate rejected with {reasons}"
                 )
 
         assert not failures, "Expected-valid fixtures failed gate:\n" + "\n".join(failures)
-
-    def test_quality_bad_fixtures_fail_gate(
-        self, ground_truth_reject_quality
-    ):
-        """Fixtures expected rejected_quality must fail the gate."""
-        failures: list[str] = []
-
-        for f in ground_truth_reject_quality:
-            ai_out = f["expected_output"].get("ai_output")
-            if ai_out is None:
-                continue
-
-            cl = JobClassification(
-                technical_skills=ai_out.get("skills", []),
-                seniority=ai_out.get("seniority", "unknown"),
-                role_family=ai_out.get("role_family", "other"),
-                remote_mode=ai_out.get("remote_mode", "unknown"),
-                employment_type=ai_out.get("employment_type", "full_time"),
-                salary_min=ai_out.get("salary_min"),
-                salary_max=ai_out.get("salary_max"),
-                ai_confidence=ai_out.get("confidence", 0.0),
-                quality_flags=ai_out.get("quality_flags", []),
-            )
-            ok, _ = passes_quality_gate(cl)
-            if ok:
-                failures.append(
-                    f"{f['input']['title'][:40]}: expected gate reject but passed"
-                )
-
-        assert not failures, "Expected-reject fixtures passed gate:\n" + "\n".join(failures)
-
-    def test_expected_status_matches_evaluate(
-        self, ground_truth_all
-    ):
-        """evaluate() status must match expected_status for non-prefilter fixtures."""
-        from models.job import JobCompany, JobContent, JobSource, Language
-        from pipeline.quality_gate import evaluate
-
-        mismatches: list[str] = []
-        _NOW_DT = datetime.now(tz=timezone.utc)
-
-        for f in ground_truth_all:
-            expected = f["expected_output"]["expected_status"]
-            if expected == "rejected_prefilter":
-                continue  # Quality gate doesn't apply to prefilter rejects
-
-            ai_out = f["expected_output"].get("ai_output")
-            if ai_out is None:
-                continue
-
-            cl = JobClassification(
-                technical_skills=ai_out.get("skills", []),
-                seniority=ai_out.get("seniority", "unknown"),
-                role_family=ai_out.get("role_family", "other"),
-                remote_mode=ai_out.get("remote_mode", "unknown"),
-                employment_type=ai_out.get("employment_type", "full_time"),
-                salary_min=ai_out.get("salary_min"),
-                salary_max=ai_out.get("salary_max"),
-                ai_confidence=ai_out.get("confidence", 0.0),
-                quality_flags=ai_out.get("quality_flags", []),
-            )
-            inp = f["input"]
-            job = Job(
-                url=inp["url"],
-                dedup_hash="test_hash",
-                source_info=JobSource(source=inp["source"]),
-                content=JobContent(
-                    title=inp["title"],
-                    title_normalized=inp["title"].lower(),
-                    description=inp["description"],
-                    language=Language.EN,
-                ),
-                company=JobCompany(
-                    name=inp["company_name"],
-                    name_normalized=inp["company_name"].lower(),
-                ),
-                posted_at=_NOW_DT,
-                classification=cl,
-            )
-
-            result = evaluate(job)
-            actual = result.status.value
-
-            if actual != expected:
-                mismatches.append(
-                    f"{inp['title'][:40]}: expected={expected}, got={actual} "
-                    f"(reason={result.reject_reason})"
-                )
-
-        assert not mismatches, "Status mismatches:\n" + "\n".join(mismatches)

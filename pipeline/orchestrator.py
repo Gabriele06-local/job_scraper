@@ -1,13 +1,20 @@
-"""Import pipeline orchestrator — SPEC 00.
+"""Import pipeline orchestrator — SPEC 00 + SDD strict.
 
-Stages: Pre-filter → Dedupe → AI Classify → Quality Gate → Persist.
+Stages: Pre-filter → URL validity (Stage 0.5) → Dedupe → AI Classify →
+        Quality Gate → Persist.
+
 Fetch + Normalize are handled by scrapers upstream; this class starts from RawJob.
 
-Idempotent: dedup_hash prevents double-processing. dry_run skips Mongo writes.
+Idempotent: dedup_hash prevents double-processing. `dry_run=True` skips Mongo writes.
+
+Pipeline emits per-run aggregates into `PipelineResult.counters` plus, when a
+`ImportReportTracker` is injected, controlled-vocabulary failure counts via
+`report_tracker.add_failure(...)` (SDD §I.3).
 """
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
@@ -26,6 +33,7 @@ from models.job import (
     JobSalary,
     JobSource,
     JobStatus,
+    QualityTier,
     RawJob,
     compute_dedup_hash,
     normalize_text,
@@ -34,6 +42,8 @@ from pipeline.dedupe import check_fuzzy_dup, find_existing_job, merge_with_exist
 from pipeline.language_detector import detect_language
 from pipeline.prefilter import should_send_to_ai
 from pipeline.quality_gate import QualityRejectReason, evaluate
+from pipeline.report import ImportReportTracker
+from pipeline.url_validator import URLValidationResult
 
 logger = structlog.get_logger(__name__)
 
@@ -44,6 +54,7 @@ class PipelineCounters:
 
     total: int = 0
     prefilter_rejected: int = 0
+    url_invalid: int = 0
     dedupe_hit: int = 0
     fuzzy_dup_flagged: int = 0
     ai_classified: int = 0
@@ -53,6 +64,16 @@ class PipelineCounters:
     gate_rejected: int = 0
     persisted: int = 0
     dry_run_skipped: int = 0
+    # SDD additions
+    geocode_pending: int = 0
+    enrichment_ms_sum: float = 0.0
+    enrichment_ms_count: int = 0
+    failure_reasons: dict[str, int] = field(default_factory=dict)
+
+    def average_enrichment_ms(self) -> float:
+        if self.enrichment_ms_count == 0:
+            return 0.0
+        return self.enrichment_ms_sum / self.enrichment_ms_count
 
 
 @dataclass
@@ -65,13 +86,18 @@ class PipelineResult:
 
 
 class ImportPipeline:
-    """Stateless import pipeline: Pre-filter → Dedupe → AI → Gate → Persist.
+    """Stateless import pipeline: Pre-filter → URL → Dedupe → AI → Gate → Persist.
 
     Args:
-        jobs_col: MongoDB jobs collection (real or mongomock for tests).
+        jobs_col: MongoDB jobs collection (real or mongomock).
         companies_col: MongoDB companies collection for upsert/linking.
-        classifier: GroqClassifier instance (injected for test mocking).
-        dry_run: If True, skip all Mongo writes.
+        classifier: GroqClassifier (injected for tests).
+        dry_run: When True, skip all Mongo writes.
+        report_tracker: Optional ImportReportTracker — when present, the
+            orchestrator emits `add_failure(...)` calls for each rejection
+            and `record_enrichment_ms(...)` for each Groq call.
+        report_id: run_id returned by `report_tracker.start(...)`; required
+            when `report_tracker` is supplied.
     """
 
     def __init__(
@@ -80,21 +106,42 @@ class ImportPipeline:
         companies_col: Collection,  # type: ignore[type-arg]
         classifier: Optional[GroqClassifier] = None,
         dry_run: bool = False,
+        report_tracker: ImportReportTracker | None = None,
+        report_id: str | None = None,
     ) -> None:
         self._jobs_col = jobs_col
         self._companies_col = companies_col
         self._classifier = classifier or GroqClassifier()
         self._dry_run = dry_run
+        self._report_tracker = report_tracker
+        self._report_id = report_id
 
-    def run(self, raw_jobs: list[RawJob]) -> PipelineResult:
-        """Process a batch of normalized RawJobs through all pipeline stages."""
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    def run(
+        self,
+        raw_jobs: list[RawJob],
+        *,
+        url_results: dict[str, URLValidationResult] | None = None,
+    ) -> PipelineResult:
+        """Process a batch of normalized RawJobs through all pipeline stages.
+
+        Args:
+            raw_jobs: Output of upstream Normalize stage.
+            url_results: Optional pre-pipeline URL probe results
+                (`PrePipelineURLValidator.validate_many`). Jobs whose URL is in
+                this dict with `is_valid=False` are persisted as `EXPIRED`
+                without invoking the AI classifier.
+        """
         result = PipelineResult()
         c = result.counters
         c.total = len(raw_jobs)
 
         for raw in raw_jobs:
             try:
-                self._process_one(raw, c)
+                self._process_one(raw, c, result.errors, url_results or {})
             except Exception as exc:
                 logger.error("pipeline.unexpected_error", url=raw.url, error=str(exc))
                 result.errors.append(f"{raw.url}: {exc}")
@@ -105,6 +152,7 @@ class ImportPipeline:
             "pipeline.run_complete",
             total=c.total,
             prefilter_rejected=c.prefilter_rejected,
+            url_invalid=c.url_invalid,
             dedupe_hit=c.dedupe_hit,
             fuzzy_dup_flagged=c.fuzzy_dup_flagged,
             ai_classified=c.ai_classified,
@@ -113,6 +161,8 @@ class ImportPipeline:
             gate_premium=c.gate_premium,
             gate_rejected=c.gate_rejected,
             persisted=c.persisted,
+            geocode_pending=c.geocode_pending,
+            avg_enrichment_ms=round(c.average_enrichment_ms(), 1),
             dry_run=self._dry_run,
             **result.cost_summary,
         )
@@ -122,16 +172,40 @@ class ImportPipeline:
     # Private stage methods
     # ------------------------------------------------------------------
 
-    def _process_one(self, raw: RawJob, c: PipelineCounters) -> None:
+    def _process_one(
+        self,
+        raw: RawJob,
+        c: PipelineCounters,
+        errors: list[str],
+        url_results: dict[str, URLValidationResult],
+    ) -> None:
         logger.debug("job.process", title=raw.title[:80], source=raw.source, url=raw.url)
 
         # Stage 1: Pre-filter
         passes, reason = should_send_to_ai(raw)
         if not passes:
             c.prefilter_rejected += 1
+            self._tally_failure(c, _prefilter_reason_code(reason))
             logger.debug("job.prefilter_rejected", title=raw.title[:80], reason=reason)
             if not self._dry_run:
                 self._persist_rejected_prefilter(raw, reason)
+            return
+
+        # Stage 0.5: URL validity (SDD §A.1 — only when we have a probe result)
+        url_result = url_results.get(raw.url)
+        if url_result is not None and not url_result.is_valid:
+            c.url_invalid += 1
+            self._tally_failure(c, QualityRejectReason.URL_INVALID.value)
+            reject_code = f"URL_INVALID:{url_result.reason or 'unknown'}"
+            logger.info(
+                "job.url_invalid",
+                title=raw.title[:80],
+                url=raw.url,
+                status_code=url_result.status_code,
+                reason=url_result.reason,
+            )
+            if not self._dry_run:
+                self._persist_url_invalid(raw, reject_code)
             return
 
         # Stage 2: Hash dedupe
@@ -139,17 +213,18 @@ class ImportPipeline:
         existing = find_existing_job(dedup_hash, self._jobs_col)
         if existing is not None:
             c.dedupe_hit += 1
+            self._tally_failure(c, QualityRejectReason.DUPLICATE.value)
             logger.debug("job.dedupe_hit", title=raw.title[:80])
             if not self._dry_run:
                 merge_with_existing(existing, raw, self._jobs_col)
             return
 
-        # Stage 2b: Fuzzy dedupe (flag only — don't skip, just count)
+        # Stage 2b: Fuzzy dedupe (flag only)
         if check_fuzzy_dup(raw, self._jobs_col):
             c.fuzzy_dup_flagged += 1
             logger.debug("job.fuzzy_dup_flagged", title=raw.title[:80])
 
-        # Stage 3: AI classification
+        # Stage 3: AI classification (with per-job timing)
         job = self._raw_to_job(raw, dedup_hash)
         logger.info(
             "job.ai_classify",
@@ -157,12 +232,19 @@ class ImportPipeline:
             source=raw.source,
             desc_len=len(raw.description),
         )
+        t0 = time.perf_counter()
         classification = self._classifier.classify(self._to_classify_input(raw))
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        c.enrichment_ms_sum += elapsed_ms
+        c.enrichment_ms_count += 1
+        if self._report_tracker and self._report_id:
+            self._report_tracker.record_enrichment_ms(self._report_id, elapsed_ms)
 
         if classification is None:
             c.ai_unavailable += 1
+            self._tally_failure(c, QualityRejectReason.AI_CLASSIFICATION_FAILED.value)
             job.status = JobStatus.REJECTED_QUALITY
-            job.reject_reason = QualityRejectReason.AI_UNAVAILABLE.value
+            job.reject_reason = QualityRejectReason.AI_CLASSIFICATION_FAILED.value
             job.quality = JobQuality(quality_score=0)
             logger.warning("job.ai_unavailable", title=raw.title[:80], url=raw.url)
         else:
@@ -178,7 +260,6 @@ class ImportPipeline:
                 confidence=round(classification.ai_confidence, 2),
                 skills=classification.technical_skills[:5],
             )
-            # Sync salary from classification to top-level JobSalary
             job.salary = JobSalary(
                 min=classification.salary_min,
                 max=classification.salary_max,
@@ -187,26 +268,34 @@ class ImportPipeline:
 
             # Stage 4: Quality gate
             job = evaluate(job)
-            if job.status == JobStatus.PREMIUM:
-                c.gate_premium += 1
-                logger.info("job.gate_pass", title=raw.title[:80], status="premium")
-            elif job.status == JobStatus.VALID:
-                c.gate_valid += 1
-                logger.info("job.gate_pass", title=raw.title[:80], status="valid")
+            if job.status == JobStatus.ACTIVE:
+                if job.quality.quality_tier == QualityTier.PREMIUM:
+                    c.gate_premium += 1
+                    logger.info("job.gate_pass", title=raw.title[:80], tier="premium")
+                else:
+                    c.gate_valid += 1
+                    logger.info("job.gate_pass", title=raw.title[:80], tier="valid")
+                if job.quality.geocode_pending:
+                    c.geocode_pending += 1
             else:
                 c.gate_rejected += 1
+                self._tally_failure(c, job.reject_reason or "UNKNOWN")
                 logger.info(
                     "job.gate_rejected",
                     title=raw.title[:80],
                     reason=job.reject_reason,
                 )
 
-        # Stage 5: Company upsert — link job to companies collection
+        # Stage 5: Company upsert
         if not self._dry_run:
             company_id = self._upsert_company(job)
             if company_id:
                 job.company.id = company_id
-                logger.debug("job.company_linked", company=job.company.name, company_id=company_id)
+                logger.debug(
+                    "job.company_linked",
+                    company=job.company.name,
+                    company_id=company_id,
+                )
 
         # Stage 6: Persist
         if self._dry_run:
@@ -217,8 +306,17 @@ class ImportPipeline:
             c.persisted += 1
             logger.debug("job.persisted", title=raw.title[:80], status=str(job.status))
 
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _tally_failure(self, c: PipelineCounters, reason: str) -> None:
+        """Increment per-run + report-tracker failure-reason buckets."""
+        c.failure_reasons[reason] = c.failure_reasons.get(reason, 0) + 1
+        if self._report_tracker and self._report_id:
+            self._report_tracker.add_failure(self._report_id, reason)
+
     def _to_classify_input(self, raw: RawJob) -> dict:  # type: ignore[type-arg]
-        """Build the dict expected by GroqClassifier.classify()."""
         return {
             "title": raw.title,
             "company_name": raw.company_name,
@@ -229,17 +327,13 @@ class ImportPipeline:
         }
 
     def _raw_to_job(self, raw: RawJob, dedup_hash: str) -> Job:
-        """Construct a bare Job from RawJob before AI classification."""
         now = datetime.now(tz=timezone.utc)
         detected_lang, _ = detect_language(raw.description[:2000])
 
         return Job(
             url=raw.url,
             dedup_hash=dedup_hash,
-            source_info=JobSource(
-                source=raw.source,
-                external_id=raw.external_id,
-            ),
+            source_info=JobSource(source=raw.source, external_id=raw.external_id),
             content=JobContent(
                 title=raw.title,
                 title_normalized=normalize_text(raw.title),
@@ -262,10 +356,10 @@ class ImportPipeline:
         )
 
     def _persist_rejected_prefilter(self, raw: RawJob, reason: str) -> None:
-        """Persist a prefilter-rejected job (dedup_hash prevents AI re-run next run)."""
+        """Persist a prefilter-rejected job (idempotent via dedup_hash)."""
         dedup_hash = compute_dedup_hash(raw.title, raw.company_name, raw.source)
         if self._jobs_col.find_one({"dedup_hash": dedup_hash}):
-            return  # Already persisted — idempotent
+            return
 
         job = self._raw_to_job(raw, dedup_hash)
         job.status = JobStatus.REJECTED_PREFILTER
@@ -274,14 +368,25 @@ class ImportPipeline:
         try:
             self._jobs_col.insert_one(job.to_mongo_doc())
         except pymongo.errors.DuplicateKeyError:
-            pass  # Race: another process beat us — safe to ignore
+            pass
+
+    def _persist_url_invalid(self, raw: RawJob, reject_code: str) -> None:
+        """Persist a dead-URL stub as EXPIRED (SDD §A.1 / §I.4)."""
+        dedup_hash = compute_dedup_hash(raw.title, raw.company_name, raw.source)
+        if self._jobs_col.find_one({"dedup_hash": dedup_hash}):
+            return
+
+        job = self._raw_to_job(raw, dedup_hash)
+        job.status = JobStatus.EXPIRED
+        job.reject_reason = reject_code
+        job.expires_at = datetime.now(tz=timezone.utc)
+        try:
+            self._jobs_col.insert_one(job.to_mongo_doc())
+        except pymongo.errors.DuplicateKeyError:
+            pass
 
     def _upsert_company(self, job: Job) -> str | None:
-        """Upsert company by name_normalized, return str(_id).
-
-        Uses $setOnInsert so backend-managed fields (trustScore, logo, etc.)
-        are never overwritten by the scraper.
-        """
+        """Upsert company by name_normalized; returns str(_id)."""
         from pymongo import ReturnDocument
 
         now = datetime.now(tz=timezone.utc)
@@ -306,7 +411,11 @@ class ImportPipeline:
             )
             return str(result["_id"]) if result else None
         except Exception as exc:
-            logger.warning("pipeline.company_upsert_error", company=job.company.name, error=str(exc))
+            logger.warning(
+                "pipeline.company_upsert_error",
+                company=job.company.name,
+                error=str(exc),
+            )
             return None
 
     def _persist(self, job: Job) -> None:
@@ -319,3 +428,22 @@ class ImportPipeline:
             )
         except pymongo.errors.DuplicateKeyError:
             logger.warning("pipeline.duplicate_key_on_persist", url=job.url)
+
+
+# ---------------------------------------------------------------------------
+# Local helpers
+# ---------------------------------------------------------------------------
+
+
+def _prefilter_reason_code(raw_reason: str) -> str:
+    """Normalize prefilter reason → controlled-vocab key.
+
+    Existing prefilter codes already use `PREFILTER_*`-style upper-case strings
+    (DESCRIPTION_TOO_SHORT, etc.). We just prefix with PREFILTER_ so the
+    backend can dispatch on the leading token.
+    """
+    if not raw_reason:
+        return "PREFILTER_OTHER"
+    if raw_reason.startswith("PREFILTER_"):
+        return raw_reason
+    return f"PREFILTER_{raw_reason}"

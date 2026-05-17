@@ -176,6 +176,7 @@ def _ensure_companies_indexes(db: Database) -> None:  # type: ignore[type-arg]
         existing = {idx["name"] for idx in companies.list_indexes()}
         if "name_normalized_unique" in existing:
             companies.drop_index("name_normalized_unique")
+        _dedupe_field(companies, "name")
         _dedupe_field(companies, "name_normalized")
         companies.create_indexes(indexes)
         logger.info("mongo.companies_indexes_created")
