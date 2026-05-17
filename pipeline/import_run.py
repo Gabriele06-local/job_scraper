@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Literal
 
 import pymongo
+from pymongo.errors import OperationFailure
 import structlog
 from pymongo.collection import Collection
 
@@ -88,11 +89,35 @@ class ImportRunTracker:
         self._ensure_indexes()
 
     def _ensure_indexes(self) -> None:
-        self._col.create_index(
-            [("provider_name", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)]
-        )
-        # SDD §I.2 — new index supporting `import_reports` $lookup joins.
-        self._col.create_index([("report_id", pymongo.ASCENDING)])
+        # Name the indexes to match the legacy/Prisma convention so create_index
+        # is idempotent across deploys. Tolerate IndexOptionsConflict (code 85)
+        # when an equivalent index already exists under a different name.
+        wanted = [
+            (
+                [("provider_name", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)],
+                "import_runs_provider_name_started_at_idx",
+                {},
+            ),
+            # SDD §I.2 — index supporting `import_reports` $lookup joins.
+            (
+                [("report_id", pymongo.ASCENDING)],
+                "import_runs_report_id_idx",
+                {},
+            ),
+        ]
+        for keys, name, opts in wanted:
+            try:
+                self._col.create_index(keys, name=name, **opts)
+            except OperationFailure as exc:
+                if exc.code == 85:  # IndexOptionsConflict: equivalent index exists
+                    log.warning(
+                        "import_runs.index_already_present_with_other_name",
+                        keys=keys,
+                        wanted_name=name,
+                        error=str(exc),
+                    )
+                else:
+                    raise
 
     def save(self, record: ImportRunRecord) -> None:
         try:

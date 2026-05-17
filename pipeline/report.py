@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import pymongo
+from pymongo.errors import OperationFailure
 import structlog
 from pymongo.collection import Collection
 
@@ -88,11 +89,38 @@ class ImportReportTracker:
 
     def _ensure_indexes(self) -> None:
         # SDD §I.1 — three indexes required by the backend admin endpoints.
-        self._col.create_index([("started_at", pymongo.DESCENDING)])
-        self._col.create_index([("run_id", pymongo.ASCENDING)], unique=True)
-        self._col.create_index(
-            [("ai_model", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)]
-        )
+        # Name the indexes to stay idempotent with Prisma-managed equivalents,
+        # tolerate IndexOptionsConflict when an equivalent already exists.
+        wanted = [
+            (
+                [("started_at", pymongo.DESCENDING)],
+                "import_reports_started_at_idx",
+                {},
+            ),
+            (
+                [("run_id", pymongo.ASCENDING)],
+                "import_reports_run_id_unique",
+                {"unique": True},
+            ),
+            (
+                [("ai_model", pymongo.ASCENDING), ("started_at", pymongo.DESCENDING)],
+                "import_reports_ai_model_started_at_idx",
+                {},
+            ),
+        ]
+        for keys, name, opts in wanted:
+            try:
+                self._col.create_index(keys, name=name, **opts)
+            except OperationFailure as exc:
+                if exc.code == 85:
+                    log.warning(
+                        "import_reports.index_already_present_with_other_name",
+                        keys=keys,
+                        wanted_name=name,
+                        error=str(exc),
+                    )
+                else:
+                    raise
 
     # ------------------------------------------------------------------
     # Lifecycle
