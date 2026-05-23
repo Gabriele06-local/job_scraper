@@ -62,6 +62,11 @@ def test_jsearch_yields_dicts() -> None:
     assert jobs[0]["location_raw"] == "Austin, US"
     assert jobs[0]["salary_min"] == 120000
     assert jobs[0]["external_id"] == "abc123"
+    # posted_at parsed to tz-aware datetime so pre-filter accepts it
+    from datetime import datetime, timezone
+    assert isinstance(jobs[0]["published_at"], datetime)
+    assert jobs[0]["published_at"].tzinfo is not None
+    assert jobs[0]["published_at"] == datetime(2026, 5, 1, tzinfo=timezone.utc)
 
 
 def test_jsearch_no_crash_on_http_error() -> None:

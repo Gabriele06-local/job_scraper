@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime
 
 import requests
 import structlog
@@ -100,6 +101,17 @@ class JSearchScraper:
         sal_min = item.get("job_min_salary")
         sal_max = item.get("job_max_salary")
 
+        # JSearch returns ISO timestamps with milliseconds ("2026-05-01T00:00:00.000Z");
+        # the import-service CLI normalizer only matches 3 fixed strptime formats, so
+        # parse to a tz-aware datetime here to land on the isinstance(datetime) branch.
+        raw_posted = item.get("job_posted_at_datetime_utc") or ""
+        posted_dt: datetime | None = None
+        if raw_posted:
+            try:
+                posted_dt = datetime.fromisoformat(raw_posted.replace("Z", "+00:00"))
+            except ValueError:
+                pass
+
         return {
             "title": title,
             "company_name": company,
@@ -107,7 +119,7 @@ class JSearchScraper:
             "url": url,
             "source": "JSearch",
             "original_language": "en",
-            "published_at": item.get("job_posted_at_datetime_utc"),
+            "published_at": posted_dt,
             "location_raw": loc,
             "salary_min": int(sal_min) if sal_min else None,
             "salary_max": int(sal_max) if sal_max else None,
