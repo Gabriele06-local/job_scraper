@@ -22,12 +22,14 @@ from connectors.jobicy import JobicyConnector
 from connectors.jooble import JoobleConnector
 from connectors.remoteok import RemoteOKConnector
 from connectors.rss import RSSConnector
+from database.repository import _LEGACY_ENABLED_SLUGS
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _EXPECTED_REGISTRY_KEYS = {
+    # legacy (DB-fallback enabled)
     "adzuna",
     "jooble",
     "iprogrammatori",
@@ -46,7 +48,11 @@ _EXPECTED_REGISTRY_KEYS = {
     "personio",
 }
 
-_ENABLED_COUNT = sum(1 for e in REGISTRY.values() if e.enabled)
+# get_enabled_connectors() consults the DB-backed `providers` collection.
+# On an un-seeded test environment the lookup falls back to the legacy
+# whitelist (see database.repository.is_provider_enabled), so the expected
+# count equals the size of that whitelist.
+_ENABLED_COUNT = len(_LEGACY_ENABLED_SLUGS)
 
 
 def _mock_json_response(payload: dict) -> MagicMock:
