@@ -39,6 +39,7 @@ _EXPECTED_REGISTRY_KEYS = {
     "remotive",
     "themuse",
     "reed",
+    "jsearch",
     "greenhouse",
     "lever",
     "ashby",

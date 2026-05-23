@@ -27,6 +27,7 @@ from .himalayas import HimalayasConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
 from .jooble import JoobleConnector
+from .jsearch import JSearchConnector
 from .lever import LeverConnector
 from .personio import PersonioConnector
 from .reed import ReedConnector
@@ -64,6 +65,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "remotive": ConnectorEntry(cls=RemotiveConnector, enabled=True),
     "themuse": ConnectorEntry(cls=TheMuseConnector, enabled=True),
     "reed": ConnectorEntry(cls=ReedConnector, enabled=True),
+    "jsearch": ConnectorEntry(cls=JSearchConnector, enabled=True),
     "greenhouse": ConnectorEntry(cls=GreenhouseConnector, enabled=True),
     "lever": ConnectorEntry(cls=LeverConnector, enabled=True),
     "ashby": ConnectorEntry(cls=AshbyConnector, enabled=True),
@@ -110,6 +112,7 @@ __all__ = [
     "IProgrammatoriConnector",
     "JobicyConnector",
     "JoobleConnector",
+    "JSearchConnector",
     "LeverConnector",
     "PersonioConnector",
     "REGISTRY",
