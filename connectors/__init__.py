@@ -35,6 +35,7 @@ from .reed import ReedConnector
 from .remoteok import RemoteOKConnector
 from .remotive import RemotiveConnector
 from .rss import RSSConnector
+from .startup_jobs import StartupJobsConnector
 from .themuse import TheMuseConnector
 from .workday_jobs import WorkdayJobsConnector
 
@@ -76,6 +77,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     # default in seed_providers; enable per-slug from the backoffice).
     "active_jobs_db": ConnectorEntry(cls=ActiveJobsDbConnector, enabled=True),
     "workday_jobs": ConnectorEntry(cls=WorkdayJobsConnector, enabled=True),
+    "startup_jobs": ConnectorEntry(cls=StartupJobsConnector, enabled=True),
 }
 
 
@@ -140,6 +142,7 @@ __all__ = [
     "RemotiveConnector",
     "RSSConnector",
     "SourceType",
+    "StartupJobsConnector",
     "TheMuseConnector",
     "WorkdayJobsConnector",
     "get_enabled_connectors",

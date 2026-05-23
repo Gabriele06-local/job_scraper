@@ -49,6 +49,7 @@ _EXPECTED_REGISTRY_KEYS = {
     # new RapidAPI providers (DB-gated, disabled by default in seed)
     "active_jobs_db",
     "workday_jobs",
+    "startup_jobs",
 }
 
 # get_enabled_connectors() consults the DB-backed `providers` collection.
