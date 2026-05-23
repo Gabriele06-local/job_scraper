@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     jooble_api_key: str = ""
     reed_api_key: str = ""
     themuse_api_key: str = ""
+    apify_api_token: str = ""
 
     # Search config — override via comma-separated env vars
     scrape_languages: list[str] = ["it", "en", "es", "fr", "de"]
