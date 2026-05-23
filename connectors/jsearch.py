@@ -1,4 +1,4 @@
-"""JSearch connector — wraps JSearchScraper (Apify-proxied) for the import pipeline."""
+"""JSearch connector — wraps JSearchScraper (RapidAPI) for the import pipeline."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class JSearchConnector(BaseConnector):
     rate_limit_seconds = 0.5
 
     def __init__(self) -> None:
-        self._scraper = JSearchScraper(api_token=settings.apify_api_token)
+        self._scraper = JSearchScraper(api_key=settings.rapidapi_key)
 
     def fetch(self) -> Iterator[dict]:
         try:

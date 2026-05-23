@@ -1,4 +1,4 @@
-"""JSearch scraper — fetches via Apify community actor (mhrynenko/jsearch-scraper)."""
+"""JSearch (RapidAPI) scraper — calls jsearch.p.rapidapi.com/search directly."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
-_ENDPOINT = "https://api.apify.com/v2/acts/{actor}/run-sync-get-dataset-items"
-_ACTOR_ID = "mhrynenko~jsearch-scraper"
-_TIMEOUT = 300
-_MAX_ITEMS_PER_QUERY = 50
+_BASE_URL = "https://jsearch.p.rapidapi.com/search"
+_RAPIDAPI_HOST = "jsearch.p.rapidapi.com"
+_TIMEOUT = 30
+_MAX_PAGES = 5  # 10 results/page → ~50 per keyword
 _KEYWORDS = [
     "software engineer",
     "backend developer",
@@ -28,49 +28,59 @@ _KEYWORDS = [
 
 
 class JSearchScraper:
-    """Scraper for JSearch jobs proxied via Apify run-sync actor."""
+    """Scraper for the JSearch RapidAPI job aggregator."""
 
-    def __init__(self, api_token: str = "") -> None:
-        self._api_token = api_token
+    def __init__(self, api_key: str = "") -> None:
+        self._api_key = api_key
 
     def fetch(self) -> list[dict]:
-        """Run the Apify actor once per keyword, returning normalized RawJob dicts."""
-        if not self._api_token:
-            log.warning("jsearch.no_api_token")
+        """Paginate the JSearch /search endpoint, returning normalized RawJob dicts."""
+        if not self._api_key:
+            log.warning("jsearch.no_api_key")
             return []
 
+        headers = {
+            "X-RapidAPI-Key": self._api_key,
+            "X-RapidAPI-Host": _RAPIDAPI_HOST,
+        }
         jobs: list[dict] = []
         seen_ids: set[str] = set()
-        url = _ENDPOINT.format(actor=_ACTOR_ID)
 
         for keyword in _KEYWORDS:
-            try:
-                resp = requests.post(
-                    url,
-                    params={"token": self._api_token},
-                    json={
-                        "queries": [keyword],
-                        "maxItems": _MAX_ITEMS_PER_QUERY,
-                        "country": "us",
-                        "language": "en",
-                        "datePosted": "month",
-                    },
-                    timeout=_TIMEOUT,
-                )
-                resp.raise_for_status()
-                items = resp.json() or []
-                for item in items:
-                    jid = str(item.get("job_id") or "")
-                    if not jid or jid in seen_ids:
-                        continue
-                    seen_ids.add(jid)
-                    normalized = self._normalize(item)
-                    if normalized:
-                        jobs.append(normalized)
-                time.sleep(0.5)
-            except requests.RequestException as exc:
-                log.error("jsearch.fetch_error", keyword=keyword, error=str(exc))
-                continue
+            for page in range(1, _MAX_PAGES + 1):
+                try:
+                    resp = requests.get(
+                        _BASE_URL,
+                        headers=headers,
+                        params={
+                            "query": keyword,
+                            "page": page,
+                            "num_pages": 1,
+                            "date_posted": "month",
+                        },
+                        timeout=_TIMEOUT,
+                    )
+                    resp.raise_for_status()
+                    items = resp.json().get("data") or []
+                    if not items:
+                        break
+                    for item in items:
+                        jid = str(item.get("job_id") or "")
+                        if not jid or jid in seen_ids:
+                            continue
+                        seen_ids.add(jid)
+                        normalized = self._normalize(item)
+                        if normalized:
+                            jobs.append(normalized)
+                    time.sleep(0.5)
+                except requests.RequestException as exc:
+                    log.error(
+                        "jsearch.fetch_error",
+                        keyword=keyword,
+                        page=page,
+                        error=str(exc),
+                    )
+                    break
 
         log.info("jsearch.fetch_complete", count=len(jobs))
         return jobs

@@ -15,8 +15,8 @@ from connectors.jsearch import JSearchConnector
 
 def main() -> int:
     conn = JSearchConnector()
-    if not conn._scraper._api_token:
-        print("ERROR: APIFY_API_TOKEN not set in .env", file=sys.stderr)
+    if not conn._scraper._api_key:
+        print("ERROR: RAPIDAPI_KEY not set in .env", file=sys.stderr)
         return 1
 
     print(f"Fetching first 10 jobs from {conn.source_name}…")
