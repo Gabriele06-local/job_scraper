@@ -36,6 +36,7 @@ from .remoteok import RemoteOKConnector
 from .remotive import RemotiveConnector
 from .rss import RSSConnector
 from .themuse import TheMuseConnector
+from .workday_jobs import WorkdayJobsConnector
 
 if TYPE_CHECKING:
     pass
@@ -74,6 +75,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     # New RapidAPI connectors — code-level enabled, DB-gated (disabled by
     # default in seed_providers; enable per-slug from the backoffice).
     "active_jobs_db": ConnectorEntry(cls=ActiveJobsDbConnector, enabled=True),
+    "workday_jobs": ConnectorEntry(cls=WorkdayJobsConnector, enabled=True),
 }
 
 
@@ -139,5 +141,6 @@ __all__ = [
     "RSSConnector",
     "SourceType",
     "TheMuseConnector",
+    "WorkdayJobsConnector",
     "get_enabled_connectors",
 ]
