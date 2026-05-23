@@ -27,6 +27,7 @@ from .faang_watch import FaangWatchConnector
 from .greenhouse import GreenhouseConnector
 from .himalayas import HimalayasConnector
 from .hn_hiring import HNHiringConnector
+from .hn_realtime import HNRealtimeConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
 from .jooble import JoobleConnector
@@ -84,6 +85,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "hn_hiring": ConnectorEntry(cls=HNHiringConnector, enabled=True),
     "yc_jobs": ConnectorEntry(cls=YCJobsConnector, enabled=True),
     "faang_watch": ConnectorEntry(cls=FaangWatchConnector, enabled=True),
+    "hn_realtime": ConnectorEntry(cls=HNRealtimeConnector, enabled=True),
 }
 
 
@@ -138,6 +140,7 @@ __all__ = [
     "GreenhouseConnector",
     "HimalayasConnector",
     "HNHiringConnector",
+    "HNRealtimeConnector",
     "IProgrammatoriConnector",
     "JobicyConnector",
     "JoobleConnector",
