@@ -18,6 +18,7 @@ import structlog
 
 from config import settings
 
+from .active_jobs_db import ActiveJobsDbConnector
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
 from .ashby import AshbyConnector
@@ -70,6 +71,9 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "lever": ConnectorEntry(cls=LeverConnector, enabled=True),
     "ashby": ConnectorEntry(cls=AshbyConnector, enabled=True),
     "personio": ConnectorEntry(cls=PersonioConnector, enabled=True),
+    # New RapidAPI connectors — code-level enabled, DB-gated (disabled by
+    # default in seed_providers; enable per-slug from the backoffice).
+    "active_jobs_db": ConnectorEntry(cls=ActiveJobsDbConnector, enabled=True),
 }
 
 
@@ -114,6 +118,7 @@ def get_enabled_connectors() -> list[BaseConnector]:
 
 
 __all__ = [
+    "ActiveJobsDbConnector",
     "AdzunaConnector",
     "ArbeitnowConnector",
     "AshbyConnector",

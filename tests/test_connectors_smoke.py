@@ -46,6 +46,8 @@ _EXPECTED_REGISTRY_KEYS = {
     "lever",
     "ashby",
     "personio",
+    # new RapidAPI providers (DB-gated, disabled by default in seed)
+    "active_jobs_db",
 }
 
 # get_enabled_connectors() consults the DB-backed `providers` collection.
