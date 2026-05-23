@@ -88,7 +88,7 @@ class ActiveJobsDbScraper:
                         params={
                             "limit": _PAGE_SIZE,
                             "offset": offset,
-                            "advanced_title_filter": keyword,
+                            "title_filter": keyword,
                         },
                         timeout=_TIMEOUT,
                     )
