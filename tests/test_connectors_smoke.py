@@ -52,6 +52,7 @@ _EXPECTED_REGISTRY_KEYS = {
     "startup_jobs",
     "hn_hiring",
     "yc_jobs",
+    "faang_watch",
 }
 
 # get_enabled_connectors() consults the DB-backed `providers` collection.
