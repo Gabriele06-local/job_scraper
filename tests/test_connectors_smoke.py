@@ -51,6 +51,7 @@ _EXPECTED_REGISTRY_KEYS = {
     "workday_jobs",
     "startup_jobs",
     "hn_hiring",
+    "yc_jobs",
 }
 
 # get_enabled_connectors() consults the DB-backed `providers` collection.

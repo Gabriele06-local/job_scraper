@@ -39,6 +39,7 @@ from .rss import RSSConnector
 from .startup_jobs import StartupJobsConnector
 from .themuse import TheMuseConnector
 from .workday_jobs import WorkdayJobsConnector
+from .yc_jobs import YCJobsConnector
 
 if TYPE_CHECKING:
     pass
@@ -80,6 +81,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "workday_jobs": ConnectorEntry(cls=WorkdayJobsConnector, enabled=True),
     "startup_jobs": ConnectorEntry(cls=StartupJobsConnector, enabled=True),
     "hn_hiring": ConnectorEntry(cls=HNHiringConnector, enabled=True),
+    "yc_jobs": ConnectorEntry(cls=YCJobsConnector, enabled=True),
 }
 
 
@@ -148,5 +150,6 @@ __all__ = [
     "StartupJobsConnector",
     "TheMuseConnector",
     "WorkdayJobsConnector",
+    "YCJobsConnector",
     "get_enabled_connectors",
 ]
