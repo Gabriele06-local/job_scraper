@@ -84,7 +84,15 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "startup_jobs": ConnectorEntry(cls=StartupJobsConnector, enabled=True),
     "hn_hiring": ConnectorEntry(cls=HNHiringConnector, enabled=True),
     "yc_jobs": ConnectorEntry(cls=YCJobsConnector, enabled=True),
-    "faang_watch": ConnectorEntry(cls=FaangWatchConnector, enabled=True),
+    # faang.watch ships a Dash HTML UI, not a JSON API — the documented
+    # `/seniority` endpoint returns the index page. Until an upstream
+    # JSON endpoint is exposed (or we switch to HTML scraping), this
+    # connector is permanently disabled at the code level.
+    "faang_watch": ConnectorEntry(
+        cls=FaangWatchConnector,
+        enabled=False,
+        disabled_reason="no JSON endpoint exposed by faang.watch RapidAPI listing",
+    ),
     "hn_realtime": ConnectorEntry(cls=HNRealtimeConnector, enabled=True),
 }
 

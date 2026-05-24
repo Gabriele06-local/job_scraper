@@ -14,13 +14,10 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
-_BASE_URL = "https://faang-watch-api.p.rapidapi.com/jobs"
+_BASE_URL = "https://faang-watch-api.p.rapidapi.com/seniority"
 _RAPIDAPI_HOST = "faang-watch-api.p.rapidapi.com"
 _TIMEOUT = 30
-_PAGE_SIZE = 100
-_MAX_PAGES = 5
 _RATE_LIMIT_S = 0.5
-_COMPANIES = ["google", "meta", "apple", "amazon", "netflix"]
 
 
 def _first_str(item: dict, *keys: str) -> str:
@@ -58,47 +55,52 @@ class FaangWatchScraper:
         jobs: list[dict] = []
         seen_ids: set[str] = set()
 
-        for company in _COMPANIES:
-            for page in range(_MAX_PAGES):
-                offset = page * _PAGE_SIZE
-                try:
-                    resp = requests.get(
-                        _BASE_URL,
-                        headers=headers,
-                        params={
-                            "company": company,
-                            "limit": _PAGE_SIZE,
-                            "offset": offset,
-                        },
-                        timeout=_TIMEOUT,
-                    )
-                    resp.raise_for_status()
-                    payload = resp.json()
-                    items = payload if isinstance(payload, list) else payload.get("jobs") or payload.get("data") or []
-                    if not items:
-                        break
-                    for item in items:
-                        if not isinstance(item, dict):
-                            continue
-                        eid = _first_str(item, "id", "job_id", "url")
-                        if not eid or eid in seen_ids:
-                            continue
-                        seen_ids.add(eid)
-                        normalized = self._normalize(item, fallback_company=company)
-                        if normalized:
-                            jobs.append(normalized)
-                    time.sleep(_RATE_LIMIT_S)
-                except requests.RequestException as exc:
-                    log.error(
-                        "faang_watch.fetch_error",
-                        company=company,
-                        page=page,
-                        error=str(exc),
-                    )
-                    break
+        # The /seniority endpoint returns the full pool grouped by
+        # seniority bucket. We flatten across buckets in one request.
+        try:
+            resp = requests.get(_BASE_URL, headers=headers, timeout=_TIMEOUT)
+            resp.raise_for_status()
+            payload = resp.json()
+            items = self._flatten(payload)
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                eid = _first_str(item, "id", "job_id", "url")
+                if not eid or eid in seen_ids:
+                    continue
+                seen_ids.add(eid)
+                normalized = self._normalize(item)
+                if normalized:
+                    jobs.append(normalized)
+            time.sleep(_RATE_LIMIT_S)
+        except requests.RequestException as exc:
+            log.error("faang_watch.fetch_error", error=str(exc))
 
         log.info("faang_watch.fetch_complete", count=len(jobs))
         return jobs
+
+    @staticmethod
+    def _flatten(payload: object) -> list:
+        """Pull job-like dicts out of an opaque payload shape.
+
+        Tries flat lists, common wrapper keys, and "bucket" dicts where
+        each value is a list of jobs (e.g. {senior:[...], mid:[...]}).
+        """
+        if isinstance(payload, list):
+            return payload
+        if isinstance(payload, dict):
+            for key in ("jobs", "data", "items", "results"):
+                v = payload.get(key)
+                if isinstance(v, list):
+                    return v
+            # Bucket shape: {bucket_name: [job, ...], ...}
+            flat: list = []
+            for v in payload.values():
+                if isinstance(v, list):
+                    flat.extend(v)
+            if flat:
+                return flat
+        return []
 
     def _normalize(self, item: dict, fallback_company: str = "") -> dict | None:
         try:
