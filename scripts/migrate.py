@@ -222,12 +222,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     dry_run = (not args.confirm) or args.dry_run
 
-    enabled_names = [
-        name for name, entry in REGISTRY.items() if entry.enabled
-    ]
-    disabled_names = [
-        name for name, entry in REGISTRY.items() if not entry.enabled
-    ]
+    enabled_names = [name for name, entry in REGISTRY.items() if entry.enabled]
+    disabled_names = [name for name, entry in REGISTRY.items() if not entry.enabled]
 
     log.info(
         "migrate.start",

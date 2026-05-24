@@ -66,9 +66,7 @@ class ArbeitnowScraper(BaseScraper):
                 pub_date = None
                 if created_at:
                     try:
-                        pub_date = datetime.fromtimestamp(created_at).strftime(
-                            "%Y-%m-%d"
-                        )
+                        pub_date = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d")
                     except:
                         pass
 

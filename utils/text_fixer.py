@@ -41,10 +41,10 @@ _MOJIBAKE_MARKERS: tuple[str, ...] = (
     "Ã‘",  # Ñ
     "Ã‰",  # É
     "Ã€",  # À
-    "Ã",   # generic Ã prefix used as a final fallback
+    "Ã",  # generic Ã prefix used as a final fallback
     "â€™",  # ’ (smart quote)
     "â€œ",  # “
-    "â€",   # ”
+    "â€",  # ”
     "â€“",  # –
     "â€”",  # —
     "â€¦",  # …
@@ -72,9 +72,7 @@ def fix_mojibake(text: str) -> str:
         return text
     for encoding in ("cp1252", "latin-1"):
         try:
-            return text.encode(encoding, errors="strict").decode(
-                "utf-8", errors="strict"
-            )
+            return text.encode(encoding, errors="strict").decode("utf-8", errors="strict")
         except (UnicodeEncodeError, UnicodeDecodeError):
             continue
     return text

@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.description_fetcher import DescriptionFetcher
 
+
 class TestDescriptionProcessing:
     @pytest.fixture
     def fetcher(self):
@@ -23,7 +24,7 @@ class TestDescriptionProcessing:
         </div>
         """
         markdown, logo_url = fetcher._extract_content(html)
-        
+
         assert logo_url == "https://example.com/logo.png"
         assert "Logo" not in markdown
         assert "Job Title" in markdown
@@ -39,7 +40,7 @@ class TestDescriptionProcessing:
         </div>
         """
         markdown, logo_url = fetcher._extract_content(html)
-        
+
         assert logo_url is None
         assert "Job Title" in markdown
         assert "Some text." in markdown
@@ -57,7 +58,7 @@ class TestDescriptionProcessing:
         </div>
         """
         markdown, logo_url = fetcher._extract_content(html)
-        
+
         assert logo_url == "https://example.com/logo.png"
         assert "Intro." in markdown
         assert "Outro." in markdown
@@ -72,13 +73,13 @@ class TestDescriptionProcessing:
             <img src="https://example.com/image.png" alt="Image">
         </div>
         """
-        
+
         soup = BeautifulSoup(html_desc, "html.parser")
         if bool(soup.find()):
             for img in soup.find_all("img"):
                 img.decompose()
             result_md = md(str(soup))
-            
+
         assert "HTML snippet" in result_md
         assert "![" not in result_md
         assert "image.png" not in result_md

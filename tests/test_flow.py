@@ -38,14 +38,13 @@ async def test_scraper_orchestrator_flow():
     mock_desc_fetcher.fetch.return_value = "Full job description content..."
 
     # Create orchestrator with properly patched dependencies
-    with patch("main.MongoDBClient", return_value=mock_db), patch(
-        "main.JobCategorizer", return_value=mock_categorizer
-    ), patch("main.Geocoder", return_value=mock_geocoder), patch(
-        "main.JobDeduplicator", return_value=mock_deduplicator
-    ), patch(
-        "main.DescriptionFetcher", return_value=mock_desc_fetcher
+    with (
+        patch("main.MongoDBClient", return_value=mock_db),
+        patch("main.JobCategorizer", return_value=mock_categorizer),
+        patch("main.Geocoder", return_value=mock_geocoder),
+        patch("main.JobDeduplicator", return_value=mock_deduplicator),
+        patch("main.DescriptionFetcher", return_value=mock_desc_fetcher),
     ):
-
         orchestrator = JobScraperOrchestrator(languages=["en"], limit_per_language=5)
 
         # Mock the scrapers list to have a single fake scraper
@@ -91,14 +90,13 @@ async def test_scraper_skips_duplicates():
     mock_dedup_instance = Mock()
     mock_dedup_instance.is_duplicate.return_value = True  # Always duplicate
 
-    with patch("main.MongoDBClient", return_value=mock_db), patch(
-        "main.JobCategorizer"
-    ), patch("main.Geocoder"), patch(
-        "main.JobDeduplicator", return_value=mock_dedup_instance
-    ), patch(
-        "main.DescriptionFetcher"
+    with (
+        patch("main.MongoDBClient", return_value=mock_db),
+        patch("main.JobCategorizer"),
+        patch("main.Geocoder"),
+        patch("main.JobDeduplicator", return_value=mock_dedup_instance),
+        patch("main.DescriptionFetcher"),
     ):
-
         orchestrator = JobScraperOrchestrator(languages=["en"])
 
         # Override the scrapers with a mock that behaves correctly as async
@@ -109,8 +107,7 @@ async def test_scraper_skips_duplicates():
                     "title": "Python Duplicate Job",
                     "link": "http://old.com",
                     "published_at": "today",
-                    "description": "Long enough description to avoid fetching"
-                    + ("x" * 500),
+                    "description": "Long enough description to avoid fetching" + ("x" * 500),
                 }
             ]
         )

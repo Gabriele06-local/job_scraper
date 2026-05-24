@@ -68,12 +68,8 @@ def test_crashing_connector_does_not_abort_run(fake_db, monkeypatch) -> None:
     # Make `get_db / get_jobs / get_companies / ensure_indexes` use mongomock.
     monkeypatch.setattr(cli_mod, "ensure_indexes", lambda: None)
     monkeypatch.setattr(cli_mod, "get_jobs", lambda: fake_db["jobs"])
-    monkeypatch.setattr(
-        "database.repository.get_db", lambda: fake_db
-    )
-    monkeypatch.setattr(
-        "database.repository.get_companies", lambda: fake_db["companies"]
-    )
+    monkeypatch.setattr("database.repository.get_db", lambda: fake_db)
+    monkeypatch.setattr("database.repository.get_companies", lambda: fake_db["companies"])
 
     # Replace connector registry with our pair.
     monkeypatch.setattr(

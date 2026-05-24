@@ -18,9 +18,9 @@ from datetime import datetime
 from typing import Literal
 
 import pymongo
-from pymongo.errors import OperationFailure
 import structlog
 from pymongo.collection import Collection
+from pymongo.errors import OperationFailure
 
 log = structlog.get_logger(__name__)
 

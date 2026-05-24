@@ -159,9 +159,7 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
     indexes = [
         # sparse=True so backend-managed docs (no url/dedup_hash field) are excluded
         IndexModel([("url", ASCENDING)], unique=True, sparse=True, name="url_unique"),
-        IndexModel(
-            [("dedup_hash", ASCENDING)], unique=True, sparse=True, name="dedup_hash_unique"
-        ),
+        IndexModel([("dedup_hash", ASCENDING)], unique=True, sparse=True, name="dedup_hash_unique"),
         IndexModel(
             [("status", ASCENDING), ("posted_at", DESCENDING)],
             name="status_posted_at",
@@ -172,15 +170,9 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
         ),
         IndexModel([("source", ASCENDING)], name="source"),
         IndexModel([("expires_at", ASCENDING)], sparse=True, name="expires_at_sparse"),
-        IndexModel(
-            [("last_probed_at", ASCENDING)], sparse=True, name="last_probed_at_sparse"
-        ),
-        IndexModel(
-            [("location.geo", "2dsphere")], name="location_geo_2dsphere"
-        ),
-        IndexModel(
-            [("company.name_normalized", ASCENDING)], name="company_name_normalized"
-        ),
+        IndexModel([("last_probed_at", ASCENDING)], sparse=True, name="last_probed_at_sparse"),
+        IndexModel([("location.geo", "2dsphere")], name="location_geo_2dsphere"),
+        IndexModel([("company.name_normalized", ASCENDING)], name="company_name_normalized"),
         IndexModel(
             [("role_family", ASCENDING), ("seniority", ASCENDING)],
             name="role_family_seniority",

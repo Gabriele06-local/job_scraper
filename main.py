@@ -59,9 +59,7 @@ class JobScraperOrchestrator:
             ArbeitnowScraper(),
             JobicyScraper(),
             RemoteOKScraper(),
-            AdzunaScraper(
-                app_id=os.getenv("ADZUNA_APP_ID"), app_key=os.getenv("ADZUNA_APP_KEY")
-            ),
+            AdzunaScraper(app_id=os.getenv("ADZUNA_APP_ID"), app_key=os.getenv("ADZUNA_APP_KEY")),
             JoobleScraper(api_key=os.getenv("JOOBLE_API_KEY")),
             RSSScraper(
                 rss_urls={
@@ -208,9 +206,7 @@ class JobScraperOrchestrator:
             # Ensure published_at is a datetime object for the database
             import pytz
 
-            job["published_at"] = self.parse_date(pub_date_raw) or datetime.now(
-                pytz.utc
-            )
+            job["published_at"] = self.parse_date(pub_date_raw) or datetime.now(pytz.utc)
 
             # Refine description if it's too short (snippet)
             desc = job.get("description", "")
@@ -219,9 +215,7 @@ class JobScraperOrchestrator:
             if not desc or len(desc) < 500:
                 logger.info(f"Fetching full description for: {job['title']}")
                 try:
-                    full_desc, extracted_logo = await self.description_fetcher.fetch(
-                        job["link"]
-                    )
+                    full_desc, extracted_logo = await self.description_fetcher.fetch(job["link"])
                     if full_desc:
                         job["description"] = full_desc
                         is_markdown = True
@@ -235,9 +229,7 @@ class JobScraperOrchestrator:
                                 )
                         logger.info("Successfully fetched full description")
                     else:
-                        logger.warning(
-                            "Could not fetch full description, keeping snippet"
-                        )
+                        logger.warning("Could not fetch full description, keeping snippet")
                 except Exception as e:
                     if job.get("source") == "RSS Feed":
                         print(
@@ -269,18 +261,12 @@ class JobScraperOrchestrator:
 
             # 2. AI Categorize
             logger.info(f"Processing job: {job['title']}")
-            ai_data = await self.categorizer.categorize_job(
-                job["title"], job["description"]
-            )
+            ai_data = await self.categorizer.categorize_job(job["title"], job["description"])
 
             if ai_data:
                 if isinstance(ai_data.get("city"), list):
-                    ai_data["city"] = (
-                        str(ai_data["city"][0]) if ai_data["city"] else None
-                    )
-                elif ai_data.get("city") and not isinstance(
-                    ai_data["city"], (str, type(None))
-                ):
+                    ai_data["city"] = str(ai_data["city"][0]) if ai_data["city"] else None
+                elif ai_data.get("city") and not isinstance(ai_data["city"], (str, type(None))):
                     ai_data["city"] = str(ai_data["city"])
 
                 # Ensure Salary fields are integers
@@ -371,9 +357,7 @@ class JobScraperOrchestrator:
                     # Update Statistics
                     self.stats[lang]["total"] += 1
                     src = job.get("source", "Unknown")
-                    self.stats[lang]["sources"][src] = (
-                        self.stats[lang]["sources"].get(src, 0) + 1
-                    )
+                    self.stats[lang]["sources"][src] = self.stats[lang]["sources"].get(src, 0) + 1
                 else:
                     logger.info(
                         f"⏭️  SKIPPED (Duplicate/Error): Title={job.get('title')} | Source={job.get('source')}"
@@ -384,9 +368,7 @@ class JobScraperOrchestrator:
 
             else:
                 logger.warning(f"⚠️  AI Categorization Failed: Title={job.get('title')}")
-                print(
-                    f"⚠️  AI Categorization Failed: Title={job.get('title')}"
-                )  # Console output
+                print(f"⚠️  AI Categorization Failed: Title={job.get('title')}")  # Console output
 
             # Rate limiting for AI API
             await asyncio.sleep(1)
@@ -404,36 +386,24 @@ class JobScraperOrchestrator:
             logger.info(f"Processing language: {lang}")
 
             for scraper in self.scrapers:
-                if (
-                    self.limit_per_language
-                    and self.lang_count >= self.limit_per_language
-                ):
-                    logger.info(
-                        f"Reached limit for {lang}, skipping remaining scrapers."
-                    )
+                if self.limit_per_language and self.lang_count >= self.limit_per_language:
+                    logger.info(f"Reached limit for {lang}, skipping remaining scrapers.")
                     break
 
                 # Special handling for Adzuna to do a broad search with pagination
                 if isinstance(scraper, AdzunaScraper):
                     page = 1
                     while True:
-                        if (
-                            self.limit_per_language
-                            and self.lang_count >= self.limit_per_language
-                        ):
+                        if self.limit_per_language and self.lang_count >= self.limit_per_language:
                             break
 
                         logger.info(
                             f"Scraping {scraper.__class__.__name__} page {page} for category 'it-jobs' in {lang}"
                         )
                         try:
-                            jobs = await scraper.scrape(
-                                lang=lang, category="it-jobs", page=page
-                            )
+                            jobs = await scraper.scrape(lang=lang, category="it-jobs", page=page)
                             if not jobs:
-                                logger.info(
-                                    "No more jobs found on this page, stopping Adzuna."
-                                )
+                                logger.info("No more jobs found on this page, stopping Adzuna.")
                                 break
 
                             logger.info(f"Found {len(jobs)} potential jobs")
@@ -458,21 +428,14 @@ class JobScraperOrchestrator:
                     continue
 
                 for keyword in self.keywords:
-                    if (
-                        self.limit_per_language
-                        and self.lang_count >= self.limit_per_language
-                    ):
+                    if self.limit_per_language and self.lang_count >= self.limit_per_language:
                         break
 
-                    logger.info(
-                        f"Scraping {scraper.__class__.__name__} for {keyword} in {lang}"
-                    )
+                    logger.info(f"Scraping {scraper.__class__.__name__} for {keyword} in {lang}")
                     try:
                         jobs = await scraper.scrape(keyword, lang)
                         logger.info(f"Found {len(jobs)} potential jobs")
-                        self.lang_count = await self.process_job_list(
-                            jobs, lang, self.lang_count
-                        )
+                        self.lang_count = await self.process_job_list(jobs, lang, self.lang_count)
                     except Exception as e:
                         logger.error(f"Error in keyword scraper loop: {e}")
 
@@ -497,9 +460,7 @@ class JobScraperOrchestrator:
             print(f"   Total Imported: {data['total']}")
             print("   Breakdown by Source:")
 
-            sorted_sources = sorted(
-                data["sources"].items(), key=lambda x: x[1], reverse=True
-            )
+            sorted_sources = sorted(data["sources"].items(), key=lambda x: x[1], reverse=True)
             for source, count in sorted_sources:
                 print(f"   🔹 {source:<20}: {count}")
 
@@ -518,9 +479,7 @@ if __name__ == "__main__":
         help="Comma-separated list of languages (e.g. it,en,es)",
     )
     parser.add_argument("--limit", type=int, help="Limit of total ads per language")
-    parser.add_argument(
-        "--days", type=int, default=1, help="Lookback window in days (default: 1)"
-    )
+    parser.add_argument("--days", type=int, default=1, help="Lookback window in days (default: 1)")
 
     args = parser.parse_args()
 

@@ -44,7 +44,11 @@ class PersonioScraper:
         for pos in root.iter("position"):
             title = self._text(pos, "name") or self._text(pos, "title") or ""
             job_id = self._text(pos, "id") or ""
-            url = f"https://{company_name.lower().replace(' ', '')}.jobs.personio.de/job/{job_id}" if job_id else ""
+            url = (
+                f"https://{company_name.lower().replace(' ', '')}.jobs.personio.de/job/{job_id}"
+                if job_id
+                else ""
+            )
             if not (title and url):
                 continue
 
@@ -56,19 +60,21 @@ class PersonioScraper:
                     description_parts.append("".join(desc_el.itertext()))
             description = "\n".join(description_parts)
 
-            jobs.append({
-                "title": title,
-                "company_name": company_name,
-                "description": description,
-                "url": url,
-                "source": "Personio",
-                "original_language": "de",
-                "published_at": None,
-                "location_raw": office,
-                "salary_min": None,
-                "salary_max": None,
-                "external_id": job_id,
-            })
+            jobs.append(
+                {
+                    "title": title,
+                    "company_name": company_name,
+                    "description": description,
+                    "url": url,
+                    "source": "Personio",
+                    "original_language": "de",
+                    "published_at": None,
+                    "location_raw": office,
+                    "salary_min": None,
+                    "salary_max": None,
+                    "external_id": job_id,
+                }
+            )
         return jobs
 
     @staticmethod

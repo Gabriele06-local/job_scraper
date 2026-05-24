@@ -67,9 +67,7 @@ def run_baseline() -> None:
     clf = GroqClassifier()
 
     # Only classify offers with expected ai_output (skip prefilter rejects)
-    classifiable = [
-        f for f in fixtures if f["expected_output"].get("ai_output") is not None
-    ]
+    classifiable = [f for f in fixtures if f["expected_output"].get("ai_output") is not None]
     skipped = len(fixtures) - len(classifiable)
 
     print(f"Fixtures total: {len(fixtures)}, classifiable: {len(classifiable)}, skipped: {skipped}")
@@ -98,45 +96,52 @@ def run_baseline() -> None:
         print(f"{elapsed}ms")
 
         if classification is None:
-            results.append({
-                "fixture": Path(f.get("_fixture_name", inp["url"])).stem if "_fixture_name" in f else inp["url"],
-                "title": inp["title"],
-                "expected_status": expected_status,
-                "ai_failed": True,
-            })
+            results.append(
+                {
+                    "fixture": Path(f.get("_fixture_name", inp["url"])).stem
+                    if "_fixture_name" in f
+                    else inp["url"],
+                    "title": inp["title"],
+                    "expected_status": expected_status,
+                    "ai_failed": True,
+                }
+            )
             continue
 
         actual_skills = classification.technical_skills
         expected_skills = expected_ai.get("skills", [])
 
-        results.append({
-            "fixture": f.get("_fixture_name", inp["url"]),
-            "title": inp["title"],
-            "expected_status": expected_status,
-            "ai_failed": False,
-            # Seniority
-            "expected_seniority": expected_ai["seniority"],
-            "actual_seniority": classification.seniority.value,
-            "seniority_correct": classification.seniority.value == expected_ai["seniority"],
-            # Role family
-            "expected_role_family": expected_ai["role_family"],
-            "actual_role_family": classification.role_family.value,
-            "role_family_correct": classification.role_family.value == expected_ai["role_family"],
-            # Skills
-            "expected_skills_count": len(expected_skills),
-            "actual_skills_count": len(actual_skills),
-            "skills_jaccard": jaccard_skills(expected_skills, actual_skills),
-            "skills_precision": skills_precision(expected_skills, actual_skills),
-            "skills_recall": skills_recall(expected_skills, actual_skills),
-            # Salary MAE
-            "expected_salary_min": expected_ai.get("salary_min"),
-            "actual_salary_min": classification.salary_min,
-            "expected_salary_max": expected_ai.get("salary_max"),
-            "actual_salary_max": classification.salary_max,
-            # Confidence
-            "expected_confidence": expected_ai["confidence"],
-            "actual_confidence": classification.ai_confidence,
-        })
+        results.append(
+            {
+                "fixture": f.get("_fixture_name", inp["url"]),
+                "title": inp["title"],
+                "expected_status": expected_status,
+                "ai_failed": False,
+                # Seniority
+                "expected_seniority": expected_ai["seniority"],
+                "actual_seniority": classification.seniority.value,
+                "seniority_correct": classification.seniority.value == expected_ai["seniority"],
+                # Role family
+                "expected_role_family": expected_ai["role_family"],
+                "actual_role_family": classification.role_family.value,
+                "role_family_correct": classification.role_family.value
+                == expected_ai["role_family"],
+                # Skills
+                "expected_skills_count": len(expected_skills),
+                "actual_skills_count": len(actual_skills),
+                "skills_jaccard": jaccard_skills(expected_skills, actual_skills),
+                "skills_precision": skills_precision(expected_skills, actual_skills),
+                "skills_recall": skills_recall(expected_skills, actual_skills),
+                # Salary MAE
+                "expected_salary_min": expected_ai.get("salary_min"),
+                "actual_salary_min": classification.salary_min,
+                "expected_salary_max": expected_ai.get("salary_max"),
+                "actual_salary_max": classification.salary_max,
+                # Confidence
+                "expected_confidence": expected_ai["confidence"],
+                "actual_confidence": classification.ai_confidence,
+            }
+        )
 
     elapsed_total = round(time.monotonic() - t_start)
 
@@ -198,11 +203,15 @@ def run_baseline() -> None:
         model=settings.groq_model,
     )
 
-    print(f"\nSeniority accuracy:  {seniority_acc:.1%}" + (" ⚠ FLAG <80%" if seniority_flag else ""))
+    print(
+        f"\nSeniority accuracy:  {seniority_acc:.1%}" + (" ⚠ FLAG <80%" if seniority_flag else "")
+    )
     print(f"Role family accuracy: {role_acc:.1%}" + (" ⚠ FLAG <80%" if role_flag else ""))
     print(f"Skills precision:    {avg_precision:.1%}")
     print(f"Skills recall:       {avg_recall:.1%}")
-    print(f"Salary MAE:          {f'EUR {salary_mae:,.0f}' if salary_mae else 'n/a (insufficient data)'}")
+    print(
+        f"Salary MAE:          {f'EUR {salary_mae:,.0f}' if salary_mae else 'n/a (insufficient data)'}"
+    )
     print(f"Cost (30 calls):     ${cost['groq_cost_usd']:.4f}")
     print(f"Cost/1k offers:      ${cost_1k:.2f}")
     print(f"Report:              {REPORT_PATH}")
@@ -270,8 +279,16 @@ def write_report(
 
     for i, r in enumerate(valid_results, 1):
         title = r["title"][:35]
-        sen = "✓" if r["seniority_correct"] else f"✗ ({r['expected_seniority']}→{r['actual_seniority']})"
-        role = "✓" if r["role_family_correct"] else f"✗ ({r['expected_role_family']}→{r['actual_role_family']})"
+        sen = (
+            "✓"
+            if r["seniority_correct"]
+            else f"✗ ({r['expected_seniority']}→{r['actual_seniority']})"
+        )
+        role = (
+            "✓"
+            if r["role_family_correct"]
+            else f"✗ ({r['expected_role_family']}→{r['actual_role_family']})"
+        )
         prec = f"{r['skills_precision']:.0%}"
         rec = f"{r['skills_recall']:.0%}"
 
@@ -298,9 +315,13 @@ def write_report(
             "",
         ]
         if seniority_flag:
-            lines.append(f"- Seniority accuracy {seniority_acc:.1%} < 80% threshold. Flag in MEMORY.md for prompt tuning.")
+            lines.append(
+                f"- Seniority accuracy {seniority_acc:.1%} < 80% threshold. Flag in MEMORY.md for prompt tuning."
+            )
         if role_flag:
-            lines.append(f"- Role family accuracy {role_acc:.1%} < 80% threshold. Flag in MEMORY.md for prompt tuning.")
+            lines.append(
+                f"- Role family accuracy {role_acc:.1%} < 80% threshold. Flag in MEMORY.md for prompt tuning."
+            )
 
     REPORT_PATH.write_text("\n".join(lines) + "\n")
 

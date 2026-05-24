@@ -42,9 +42,7 @@ class JobicyScraper(BaseScraper):
 
             time.sleep(1)
 
-            response = requests.get(
-                self.BASE_URL, params=params, headers=headers, timeout=15
-            )
+            response = requests.get(self.BASE_URL, params=params, headers=headers, timeout=15)
             response.raise_for_status()
             data = response.json()
 
@@ -75,9 +73,7 @@ class JobicyScraper(BaseScraper):
                         "link": item.get("url", ""),
                         "source": "Jobicy",
                         "original_language": lang,
-                        "published_at": item.get(
-                            "pubDate"
-                        ),  # Usually YYYY-MM-DD HH:MM:SS
+                        "published_at": item.get("pubDate"),  # Usually YYYY-MM-DD HH:MM:SS
                         "location_raw": item.get("jobGeo"),
                         "employment_type": item.get("jobType"),  # e.g. full-time
                         "salary_min": item.get("annualSalaryMin"),

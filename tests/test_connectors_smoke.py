@@ -253,10 +253,7 @@ def test_remoteok_fetch_with_data() -> None:
 
 
 def test_rss_fetch_empty_feed() -> None:
-    xml = (
-        "<?xml version='1.0'?>"
-        "<rss version='2.0'><channel><title>Test</title></channel></rss>"
-    )
+    xml = "<?xml version='1.0'?><rss version='2.0'><channel><title>Test</title></channel></rss>"
     with patch("requests.get") as mock_get:
         mock_get.return_value = _mock_xml_response(xml)
         c = RSSConnector(

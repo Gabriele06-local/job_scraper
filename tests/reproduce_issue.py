@@ -59,9 +59,7 @@ class TestLinkedInScraper(unittest.TestCase):
             btn.decompose()
 
         # 2. Remove criteria list if present inside description__text
-        for criteria in desc_elem.find_all(
-            "ul", class_="description__job-criteria-list"
-        ):
+        for criteria in desc_elem.find_all("ul", class_="description__job-criteria-list"):
             criteria.decompose()
 
         # 3. Remove other unwanted sections

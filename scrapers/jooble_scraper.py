@@ -67,9 +67,7 @@ class JoobleScraper(BaseScraper):
 
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-            response = requests.post(
-                url, json=payload, headers=headers, timeout=10, verify=False
-            )
+            response = requests.post(url, json=payload, headers=headers, timeout=10, verify=False)
 
             if response.status_code == 403:
                 logger.error(
@@ -100,7 +98,9 @@ class JoobleScraper(BaseScraper):
                     }
                 )
             if skipped_closed:
-                logger.info(f"Jooble: skipped {skipped_closed} closed jobs for '{keyword}' ({lang})")
+                logger.info(
+                    f"Jooble: skipped {skipped_closed} closed jobs for '{keyword}' ({lang})"
+                )
             return jobs
         except Exception as e:
             logger.error(f"Error scraping Jooble API: {e}")

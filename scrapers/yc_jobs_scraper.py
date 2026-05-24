@@ -69,7 +69,11 @@ class YCJobsScraper:
                 )
                 resp.raise_for_status()
                 payload = resp.json()
-                items = payload if isinstance(payload, list) else payload.get("data") or payload.get("jobs") or []
+                items = (
+                    payload
+                    if isinstance(payload, list)
+                    else payload.get("data") or payload.get("jobs") or []
+                )
                 if not items:
                     break
                 for item in items:
@@ -93,16 +97,12 @@ class YCJobsScraper:
     def _normalize(self, item: dict) -> dict | None:
         try:
             title = _first_str(item, "title", "job_title", "role", "position")
-            company = _first_str(
-                item, "company_name", "company", "organization", "startup"
-            )
+            company = _first_str(item, "company_name", "company", "organization", "startup")
             url = _first_str(item, "url", "job_url", "apply_url")
             if not (title and company and url):
                 return None
 
-            posted_dt = _parse_iso(
-                _first_str(item, "date_posted", "posted_at", "published_at")
-            )
+            posted_dt = _parse_iso(_first_str(item, "date_posted", "posted_at", "published_at"))
 
             return {
                 "title": title,
