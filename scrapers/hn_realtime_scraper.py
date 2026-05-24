@@ -14,12 +14,20 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
-_BASE_URL = "https://hacker-news-real-time-jobs-startup-hiring-api.p.rapidapi.com/jobs"
+_BASE_URL = "https://hacker-news-real-time-jobs-startup-hiring-api.p.rapidapi.com/jobs/search"
 _RAPIDAPI_HOST = "hacker-news-real-time-jobs-startup-hiring-api.p.rapidapi.com"
 _TIMEOUT = 30
-_PAGE_SIZE = 100
-_MAX_PAGES = 5
 _RATE_LIMIT_S = 0.5
+_KEYWORDS = [
+    "engineer",
+    "developer",
+    "python",
+    "rust",
+    "go",
+    "typescript",
+    "data",
+    "senior",
+]
 
 
 def _first_str(item: dict, *keys: str) -> str:
@@ -66,19 +74,32 @@ class HNRealtimeScraper:
         jobs: list[dict] = []
         seen_ids: set[str] = set()
 
-        for page in range(1, _MAX_PAGES + 1):
+        # /jobs/search requires a `q` query param. No documented
+        # pagination — we sweep a small set of broad keywords and union
+        # their results. The endpoint is idempotent per query, so dedup
+        # across keywords via seen_ids.
+        for keyword in _KEYWORDS:
             try:
                 resp = requests.get(
                     _BASE_URL,
                     headers=headers,
-                    params={"limit": _PAGE_SIZE, "page": page},
+                    params={"q": keyword},
                     timeout=_TIMEOUT,
                 )
                 resp.raise_for_status()
                 payload = resp.json()
-                items = payload if isinstance(payload, list) else payload.get("jobs") or payload.get("data") or []
-                if not items:
-                    break
+                if isinstance(payload, list):
+                    items = payload
+                elif isinstance(payload, dict):
+                    items = (
+                        payload.get("jobs")
+                        or payload.get("data")
+                        or payload.get("results")
+                        or payload.get("items")
+                        or []
+                    )
+                else:
+                    items = []
                 for item in items:
                     if not isinstance(item, dict):
                         continue
@@ -91,8 +112,8 @@ class HNRealtimeScraper:
                         jobs.append(normalized)
                 time.sleep(_RATE_LIMIT_S)
             except requests.RequestException as exc:
-                log.error("hn_realtime.fetch_error", page=page, error=str(exc))
-                break
+                log.error("hn_realtime.fetch_error", keyword=keyword, error=str(exc))
+                continue
 
         log.info("hn_realtime.fetch_complete", count=len(jobs))
         return jobs
@@ -108,7 +129,10 @@ class HNRealtimeScraper:
                 return None
 
             posted_dt = _parse_iso(
-                _first_str(item, "date", "posted_at", "published_at", "created_at")
+                _first_str(
+                    item, "posted_date", "date", "posted_at", "published_at",
+                    "created_at", "scraped_at",
+                )
             ) or _epoch_to_dt(item.get("time") or item.get("timestamp"))
 
             return {

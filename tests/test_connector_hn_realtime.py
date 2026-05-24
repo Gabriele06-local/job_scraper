@@ -37,7 +37,7 @@ def test_hn_realtime_yields_dicts() -> None:
         }
     ]
     with patch("requests.get") as mock_get:
-        mock_get.side_effect = [_mock_response(payload), _mock_response([])]
+        mock_get.return_value = _mock_response(payload)
         c = HNRealtimeConnector()
         c._scraper._api_key = "test-key"
         jobs = list(itertools.islice(c.fetch(), 5))
