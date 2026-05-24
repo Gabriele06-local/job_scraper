@@ -16,64 +16,73 @@ def _mock_response(payload: object) -> MagicMock:
     return resp
 
 
+def _empty_batch() -> dict:
+    return {"batch": [], "offset": 0, "page_size": 100, "total_count": 0}
+
+
 def test_faang_watch_empty_results() -> None:
     with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response([])
+        mock_get.return_value = _mock_response(_empty_batch())
         c = FaangWatchConnector()
         jobs = list(itertools.islice(c.fetch(), 5))
     assert jobs == []
 
 
 def test_faang_watch_yields_dicts() -> None:
-    payload = [
-        {
-            "id": "g-1",
-            "title": "Senior SWE, Search",
-            "company": "Google",
-            "url": "https://careers.google.com/jobs/results/1/",
-            "description": "Improve Google search ranking.",
-            "location": "Mountain View, CA",
-            "date_posted": "2026-05-12T00:00:00Z",
-        }
-    ]
+    payload = {
+        "batch": [
+            {
+                "categories": ["Software Engineering"],
+                "company": "Amazon",
+                "company_url": "https://amazon.jobs/en/jobs/2874376/front-end-engineer-ii-aws-professional-services",
+                "description": "### Description\n\nOur team owns...",
+                "earliest_date": "2025-01-15T20:45:23",
+                "job_id": "jnJpGGKAyibw9Xg6iujFCv",
+                "locations": ["US, VA, Arlington"],
+                "parsed_locations": [
+                    {"city": "Arlington", "country": "United States", "state": None}
+                ],
+                "seniority": "Mid",
+                "title": "Front End Engineer II, AWS Professional Services",
+            }
+        ],
+        "offset": 0,
+        "page_size": 100,
+        "total_count": 1,
+    }
+    side_effects: list = []
+    # First page populated, second empty terminates per-company loop.
+    for _ in range(10):
+        side_effects.append(_mock_response(payload))
+        side_effects.append(_mock_response(_empty_batch()))
     with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response(payload)
+        mock_get.side_effect = side_effects
         c = FaangWatchConnector()
         c._scraper._api_key = "test-key"
         jobs = list(itertools.islice(c.fetch(), 5))
     assert len(jobs) >= 1
-    assert jobs[0]["title"] == "Senior SWE, Search"
-    assert jobs[0]["company_name"] == "Google"
-    assert jobs[0]["source"] == "faang.watch"
+    j = jobs[0]
+    assert j["title"] == "Front End Engineer II, AWS Professional Services"
+    assert j["company_name"] == "Amazon"
+    assert j["url"].startswith("https://amazon.jobs/")
+    assert j["source"] == "faang.watch"
+    assert j["location_raw"] == "Arlington, United States"
+    assert j["external_id"] == "jnJpGGKAyibw9Xg6iujFCv"
 
 
-def test_faang_watch_flattens_bucket_dict() -> None:
-    # /seniority returns a bucket dict like {senior:[...], mid:[...]}.
+def test_faang_watch_skips_incomplete_item() -> None:
     payload = {
-        "senior": [
-            {
-                "id": "s-1",
-                "title": "Staff Engineer",
-                "company": "Meta",
-                "url": "https://meta.com/jobs/s-1",
-            }
+        "batch": [
+            {"job_id": "x", "title": "no url"},  # missing company + url
         ],
-        "mid": [
-            {
-                "id": "m-1",
-                "title": "Software Engineer",
-                "company": "Apple",
-                "url": "https://apple.com/jobs/m-1",
-            }
-        ],
+        "total_count": 1,
     }
     with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response(payload)
+        mock_get.side_effect = [_mock_response(payload), _mock_response(_empty_batch())] * 10
         c = FaangWatchConnector()
         c._scraper._api_key = "test-key"
         jobs = list(c.fetch())
-    assert len(jobs) == 2
-    assert {j["title"] for j in jobs} == {"Staff Engineer", "Software Engineer"}
+    assert jobs == []
 
 
 def test_faang_watch_no_crash_on_http_error() -> None:
