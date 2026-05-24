@@ -16,40 +16,92 @@ def _mock_response(payload: object) -> MagicMock:
     return resp
 
 
+def _empty_page() -> dict:
+    return {"items": [], "totalPages": 1}
+
+
 def test_hn_hiring_empty_results() -> None:
     with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response([])
+        mock_get.return_value = _mock_response(_empty_page())
         c = HNHiringConnector()
         jobs = list(itertools.islice(c.fetch(), 5))
     assert jobs == []
 
 
 def test_hn_hiring_yields_dicts() -> None:
-    payload = [
-        {
-            "id": "hn-42",
-            "title": "Senior Rust Engineer",
-            "company": "FastCo",
-            "url": "https://news.ycombinator.com/item?id=42",
-            "description": "Build high-perf systems in Rust.",
-            "location": "Remote",
-            "time": 1740000000,
-        }
-    ]
-    side_effects: list = []
-    for _ in range(20):
-        side_effects.append(_mock_response(payload))
-        side_effects.append(_mock_response([]))
+    """A single HN comment with one role expands into one RawJob."""
+    payload = {
+        "month": "2026-05",
+        "page": 1,
+        "perPage": 100,
+        "total": 1,
+        "totalPages": 1,
+        "items": [
+            {
+                "commentId": 47975944,
+                "by": "katee",
+                "commentUrl": "https://news.ycombinator.com/item?id=47975944",
+                "extracted": {
+                    "company": "Project Debug",
+                    "locations": [{"city": "Singapore", "country": "Singapore"}],
+                    "workMode": "hybrid",
+                    "employmentType": "full-time",
+                    "salaryFrom": None,
+                    "salaryTo": None,
+                    "jobs": [
+                        {
+                            "role": "General Engineer",
+                            "keywords": ["python", "go", "kubernetes"],
+                            "url": None,
+                        }
+                    ],
+                },
+            }
+        ],
+    }
     with patch("requests.get") as mock_get:
-        mock_get.side_effect = side_effects
+        mock_get.return_value = _mock_response(payload)
         c = HNHiringConnector()
         c._scraper._api_key = "test-key"
         jobs = list(itertools.islice(c.fetch(), 5))
-    assert len(jobs) >= 1
-    assert jobs[0]["title"] == "Senior Rust Engineer"
-    assert jobs[0]["company_name"] == "FastCo"
-    assert jobs[0]["source"] == "HN Who is Hiring"
-    assert jobs[0]["location_raw"] == "Remote"
+    assert len(jobs) == 1
+    j = jobs[0]
+    assert j["title"] == "General Engineer"
+    assert j["company_name"] == "Project Debug"
+    assert j["url"] == "https://news.ycombinator.com/item?id=47975944"
+    assert j["source"] == "HN Who is Hiring"
+    assert j["location_raw"] == "Singapore, Singapore"
+    assert j["external_id"] == "47975944-0"
+    assert "python" in j["description"]
+
+
+def test_hn_hiring_fans_out_multi_role_comments() -> None:
+    """One HN comment advertising two roles yields two RawJob rows."""
+    payload = {
+        "items": [
+            {
+                "commentId": 100,
+                "commentUrl": "https://news.ycombinator.com/item?id=100",
+                "extracted": {
+                    "company": "Acme",
+                    "locations": [],
+                    "jobs": [
+                        {"role": "Backend Engineer", "url": "https://acme/be"},
+                        {"role": "Frontend Engineer", "url": "https://acme/fe"},
+                    ],
+                },
+            }
+        ],
+        "totalPages": 1,
+    }
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = _mock_response(payload)
+        c = HNHiringConnector()
+        c._scraper._api_key = "test-key"
+        jobs = list(c.fetch())
+    assert len(jobs) == 2
+    assert {j["title"] for j in jobs} == {"Backend Engineer", "Frontend Engineer"}
+    assert {j["external_id"] for j in jobs} == {"100-0", "100-1"}
 
 
 def test_hn_hiring_no_crash_on_http_error() -> None:
