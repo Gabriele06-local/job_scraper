@@ -157,9 +157,7 @@ class ExpirationChecker:
             ],
         }
         docs = list(
-            self._jobs_col.find(probe_filter)
-            .sort([("last_probed_at", 1)])
-            .limit(effective_limit)
+            self._jobs_col.find(probe_filter).sort([("last_probed_at", 1)]).limit(effective_limit)
         )
         c.total = len(docs)
 
@@ -248,9 +246,7 @@ class ExpirationChecker:
 
         self._jobs_col.update_one({"_id": doc_id}, {"$set": update})
 
-    async def _probe(
-        self, url: str, source: str, client: httpx.AsyncClient
-    ) -> ExpirationVerdict:
+    async def _probe(self, url: str, source: str, client: httpx.AsyncClient) -> ExpirationVerdict:
         try:
             r = await client.head(url)
         except httpx.TooManyRedirects:

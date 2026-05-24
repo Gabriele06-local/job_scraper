@@ -148,10 +148,7 @@ class TestPipelineBasicFlow:
 
     def test_multiple_jobs_all_persisted(self, jobs_collection):
         pipeline = _make_pipeline(jobs_collection)
-        jobs = [
-            _raw(url=f"https://jobs.example.com/{i}", title=f"Dev {i}")
-            for i in range(5)
-        ]
+        jobs = [_raw(url=f"https://jobs.example.com/{i}", title=f"Dev {i}") for i in range(5)]
         result = pipeline.run(jobs)
 
         assert result.counters.total == 5
@@ -238,10 +235,12 @@ class TestPipelineAIUnavailable:
             companies_col=companies_collection,
             classifier=mock_clf,
         )
-        result = pipeline.run([
-            _raw(url="https://a.com/1"),
-            _raw(url="https://a.com/2", title="Other Dev"),
-        ])
+        result = pipeline.run(
+            [
+                _raw(url="https://a.com/1"),
+                _raw(url="https://a.com/2", title="Other Dev"),
+            ]
+        )
 
         assert result.counters.ai_unavailable == 2
         assert result.counters.gate_valid == 0
@@ -308,10 +307,12 @@ class TestPipelineErrorResilience:
             companies_col=companies_collection,
             classifier=mock_clf,
         )
-        result = pipeline.run([
-            _raw(url="https://jobs.example.com/1"),
-            _raw(url="https://jobs.example.com/2", title="Backend Dev 2"),
-        ])
+        result = pipeline.run(
+            [
+                _raw(url="https://jobs.example.com/1"),
+                _raw(url="https://jobs.example.com/2", title="Backend Dev 2"),
+            ]
+        )
 
         assert len(result.errors) == 1
         assert result.counters.persisted == 1
@@ -351,15 +352,17 @@ class TestPipelineGroundTruth:
         for f in ground_truth_pass:
             inp = f["input"]
             posted = datetime.fromisoformat(inp["posted_at"]).replace(tzinfo=timezone.utc)
-            raw_jobs.append(RawJob(
-                url=inp["url"],
-                title=inp["title"],
-                description=inp["description"],
-                company_name=inp["company_name"],
-                source=inp["source"],
-                posted_at=posted,
-                original_language=inp.get("detected_language"),
-            ))
+            raw_jobs.append(
+                RawJob(
+                    url=inp["url"],
+                    title=inp["title"],
+                    description=inp["description"],
+                    company_name=inp["company_name"],
+                    source=inp["source"],
+                    posted_at=posted,
+                    original_language=inp.get("detected_language"),
+                )
+            )
 
         result = pipeline.run(raw_jobs)
         assert result.counters.ai_classified == len(raw_jobs)
@@ -393,10 +396,16 @@ class TestCompanyLinking:
 
     def test_same_company_not_duplicated(self, jobs_collection, companies_collection):
         pipeline = _make_pipeline(jobs_collection, companies_collection)
-        pipeline.run([
-            _raw(url="https://jobs.example.com/1", company_name="Acme Corp"),
-            _raw(url="https://jobs.example.com/2", title="Backend Dev 2", company_name="acme CORP"),
-        ])
+        pipeline.run(
+            [
+                _raw(url="https://jobs.example.com/1", company_name="Acme Corp"),
+                _raw(
+                    url="https://jobs.example.com/2",
+                    title="Backend Dev 2",
+                    company_name="acme CORP",
+                ),
+            ]
+        )
 
         assert companies_collection.count_documents({}) == 1
 

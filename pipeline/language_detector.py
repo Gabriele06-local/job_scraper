@@ -40,7 +40,5 @@ def detect_language(text: str) -> tuple[Language, float]:
         return Language.OTHER, 0.0
 
     values = _detector.compute_language_confidence_values(text)
-    conf = next(
-        (v.value for v in values if v.language == detected), 0.0
-    )
+    conf = next((v.value for v in values if v.language == detected), 0.0)
     return _LINGUA_TO_SCHEMA[detected], round(conf, 4)

@@ -169,9 +169,7 @@ class PrePipelineURLValidator:
                 )
             except httpx.HTTPError as exc:
                 logger.debug("url_validator.get_fallback_error", url=url, error=str(exc)[:200])
-                return URLValidationResult(
-                    url=url, is_valid=True, status_code=None, reason="error"
-                )
+                return URLValidationResult(url=url, is_valid=True, status_code=None, reason="error")
 
         return _classify_response(url, resp)
 
@@ -208,9 +206,7 @@ def _classify_response(
 
     # 2xx + 3xx (without dead-end redirect) — alive.
     if 200 <= code < 400:
-        return URLValidationResult(
-            url=requested_url, is_valid=True, status_code=code, reason="ok"
-        )
+        return URLValidationResult(url=requested_url, is_valid=True, status_code=code, reason="ok")
 
     # 4xx other than 404/410 — let it through; downstream will re-evaluate.
     # 5xx — transient.

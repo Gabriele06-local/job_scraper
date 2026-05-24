@@ -165,9 +165,7 @@ class TestClassifyDict:
 
         def capture(**kwargs):
             msgs = kwargs.get("messages", [])
-            user_msg = next(
-                (m["content"] for m in msgs if m.get("role") == "user"), ""
-            )
+            user_msg = next((m["content"] for m in msgs if m.get("role") == "user"), "")
             captured_prompts.append(user_msg)
             # Return valid JSON on 3rd attempt
             if len(captured_prompts) >= 3:
@@ -192,9 +190,7 @@ class TestClassifyDict:
 
         def capture(**kwargs):
             msgs = kwargs.get("messages", [])
-            captured.append(
-                next((m["content"] for m in msgs if m.get("role") == "user"), "")
-            )
+            captured.append(next((m["content"] for m in msgs if m.get("role") == "user"), ""))
             return _make_groq_response(_VALID_AI_OUTPUT)
 
         client = MagicMock()
@@ -263,9 +259,7 @@ class TestClassifyDict:
 
 
 class TestClassifyGroundTruth:
-    def test_all_passing_fixtures_return_classification(
-        self, ground_truth_pass, mock_groq_client
-    ):
+    def test_all_passing_fixtures_return_classification(self, ground_truth_pass, mock_groq_client):
         from ai.classifier import GroqClassifier
 
         clf = GroqClassifier(client=mock_groq_client)
@@ -285,9 +279,7 @@ class TestClassifyGroundTruth:
             assert result is not None, f"classify() returned None for {inp['title']}"
             assert isinstance(result, JobClassification)
 
-    def test_prefilter_bad_fixtures_ai_output_is_null(
-        self, ground_truth_reject_prefilter
-    ):
+    def test_prefilter_bad_fixtures_ai_output_is_null(self, ground_truth_reject_prefilter):
         """Fixtures marked rejected_prefilter have null ai_output — no classify call needed."""
         for f in ground_truth_reject_prefilter:
             assert f["expected_output"].get("ai_output") is None

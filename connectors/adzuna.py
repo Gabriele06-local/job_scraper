@@ -48,9 +48,7 @@ class AdzunaConnector(BaseConnector):
                     log.warning("adzuna.daily_budget_exhausted", country=country)
                     return
                 try:
-                    jobs = asyncio.run(
-                        self._scraper.scrape(keyword=keyword, country=country)
-                    )
+                    jobs = asyncio.run(self._scraper.scrape(keyword=keyword, country=country))
                     log.debug(
                         "adzuna.fetched",
                         keyword=keyword,

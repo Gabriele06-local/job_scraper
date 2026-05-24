@@ -71,6 +71,7 @@ def test_http_410_marked_invalid(patch_async_client):
 
 def test_redirect_to_root_marked_invalid(patch_async_client):
     """Final landing path of `/` after a 301 chain → redirect_to_root."""
+
     def handler(req: httpx.Request) -> httpx.Response:
         path = req.url.path
         if path == "/job/3":
@@ -203,8 +204,6 @@ def test_duplicate_urls_collapsed():
 
 
 def test_result_dataclass_is_frozen():
-    r = URLValidationResult(
-        url="https://x", is_valid=True, status_code=200, reason="ok"
-    )
+    r = URLValidationResult(url="https://x", is_valid=True, status_code=200, reason="ok")
     with pytest.raises(Exception):
         r.url = "y"  # type: ignore[misc]

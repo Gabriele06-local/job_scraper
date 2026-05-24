@@ -359,9 +359,7 @@ class Job(BaseModel):
             # Quality (flattened — nested mirror kept for backend Prisma reads)
             "quality_score": self.quality.quality_score,
             "quality_tier": (
-                self.quality.quality_tier.value
-                if self.quality.quality_tier is not None
-                else None
+                self.quality.quality_tier.value if self.quality.quality_tier is not None else None
             ),
             "quality": {
                 "quality_score": self.quality.quality_score,

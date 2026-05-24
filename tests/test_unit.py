@@ -15,9 +15,13 @@ from utils.deduplicator import JobDeduplicator
 class TestJobScraperOrchestrator:
     @pytest.fixture
     def orchestrator(self):
-        with patch("main.MongoDBClient"), patch("main.JobCategorizer"), patch(
-            "main.Geocoder"
-        ), patch("main.JobDeduplicator"), patch("main.DescriptionFetcher"):
+        with (
+            patch("main.MongoDBClient"),
+            patch("main.JobCategorizer"),
+            patch("main.Geocoder"),
+            patch("main.JobDeduplicator"),
+            patch("main.DescriptionFetcher"),
+        ):
             return JobScraperOrchestrator(languages=["en"])
 
     def test_parse_date_string_formats(self, orchestrator):
@@ -85,5 +89,3 @@ class TestJobDeduplicator:
         mock_db = Mock()
         deduplicator = JobDeduplicator(mock_db)
         assert deduplicator.is_duplicate({"title": "Job without link"}) is False
-
-

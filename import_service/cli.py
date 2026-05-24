@@ -22,6 +22,7 @@ import structlog
 from config import settings
 from database.repository import ensure_indexes, get_jobs
 from models.job import RawJob
+from utils.text_fixer import fix_mojibake
 
 log = structlog.get_logger(__name__)
 
@@ -35,14 +36,17 @@ def _dict_to_raw_job(d: dict) -> RawJob | None:  # type: ignore[type-arg]
     """Convert a raw connector dict to a RawJob. Returns None if required fields missing."""
 
     url: str = d.get("url") or d.get("link") or ""
-    title: str = d.get("title") or ""
-    description: str = d.get("description") or ""
+    # Repair upstream double-encoded UTF-8 ("Ã©" → "é") on all free-text
+    # fields before they reach the pipeline. Idempotent on clean strings.
+    title: str = fix_mojibake(d.get("title") or "")
+    description: str = fix_mojibake(d.get("description") or "")
 
     company = d.get("company") or {}
     if isinstance(company, dict):
         company_name = company.get("name") or d.get("company_name") or ""
     else:
         company_name = str(company) if company else d.get("company_name") or ""
+    company_name = fix_mojibake(company_name)
 
     source: str = d.get("source") or ""
 
@@ -63,6 +67,8 @@ def _dict_to_raw_job(d: dict) -> RawJob | None:  # type: ignore[type-arg]
                 continue
 
     location_raw: str | None = d.get("location") or d.get("location_raw")
+    if location_raw:
+        location_raw = fix_mojibake(location_raw)
 
     return RawJob(
         url=url,
@@ -99,11 +105,17 @@ def cmd_import(args: argparse.Namespace) -> int:
     from database.repository import get_companies, get_db
     from pipeline.budget import DailyBudget
     from pipeline.import_run import ImportRunRecord, ImportRunTracker
+    from pipeline.mojibake_migration import ensure_done as ensure_mojibake_done
     from pipeline.orchestrator import ImportPipeline
     from pipeline.report import ImportReportTracker
     from pipeline.url_validator import build_default as build_url_validator
 
     ensure_indexes()
+    # One-shot self-heal: scan jobs/companies for double-encoded UTF-8
+    # (e.g. "Ã©" → "é") on first boot in each env. Tracked in
+    # `db.migrations`, so subsequent imports skip immediately.
+    if not args.dry_run:
+        ensure_mojibake_done()
     db = get_db()
     jobs_col = get_jobs()
     companies_col = get_companies()
@@ -214,9 +226,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     if not args.dry_run and all_raw:
         validator = build_url_validator()
         try:
-            url_results = asyncio.run(
-                validator.validate_many([j.url for j in all_raw])
-            )
+            url_results = asyncio.run(validator.validate_many([j.url for j in all_raw]))
         except Exception as exc:  # noqa: BLE001 — network code is fragile
             log.warning("cli.import.url_validator_failed", error=str(exc))
             url_results = {}
@@ -232,9 +242,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         connector_raw = per_source_raw.get(record.provider_name, [])
         connector_urls = {r.url for r in connector_raw}
         record.url_invalid_count = sum(
-            1
-            for u, r in url_results.items()
-            if u in connector_urls and not r.is_valid
+            1 for u, r in url_results.items() if u in connector_urls and not r.is_valid
         )
         # Best-effort jobs_stored attribution from per-source raw counts:
         # the per-connector slice can't tell which were rejected vs persisted,

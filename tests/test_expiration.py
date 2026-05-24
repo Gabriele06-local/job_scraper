@@ -109,6 +109,7 @@ class TestBodyMatchesExpiry:
 
     def test_per_source_pattern_takes_precedence(self, monkeypatch):
         import re
+
         monkeypatch.setitem(
             EXPIRY_BODY_PATTERNS, "my_source", [re.compile(r"custom_dead_signal", re.I)]
         )
@@ -132,6 +133,7 @@ class TestExpirationCheckerProbe:
             async with httpx.AsyncClient() as client:
                 with patch.object(client, "head", new=AsyncMock(return_value=response)):
                     return await checker._probe(url, source, client)
+
         return asyncio.run(_inner())
 
     def test_404_expired(self, checker):
@@ -179,10 +181,9 @@ class TestExpirationCheckerProbe:
 
     def test_200_with_body_pattern_source_in_allowlist(self, checker, monkeypatch):
         import re
+
         source = "special_board"
-        monkeypatch.setitem(
-            EXPIRY_BODY_PATTERNS, source, [re.compile(r"job closed", re.I)]
-        )
+        monkeypatch.setitem(EXPIRY_BODY_PATTERNS, source, [re.compile(r"job closed", re.I)])
         head_r = _mock_response(200)
         get_r = _mock_response(200, text="Sorry, this job closed last month.")
 
@@ -191,6 +192,7 @@ class TestExpirationCheckerProbe:
                 with patch.object(client, "head", new=AsyncMock(return_value=head_r)):
                     with patch.object(client, "get", new=AsyncMock(return_value=get_r)):
                         return await checker._probe("https://a.com/j/1", source, client)
+
         verdict = asyncio.run(_inner())
         assert verdict.expired is True
         assert verdict.reason == "EXPIRED_PATTERN"
@@ -205,6 +207,7 @@ class TestExpirationCheckerProbe:
                 ):
                     url = "https://unreachable.example.com/job/1"
                     return await checker._probe(url, "src", client)
+
         verdict = asyncio.run(_inner())
         assert verdict.expired is None
 
@@ -316,6 +319,7 @@ class TestCLICommands:
         import argparse
 
         from import_service.cli import cmd_reindex
+
         args = argparse.Namespace()
         with (
             patch("import_service.cli.ensure_indexes") as mock_idx,
@@ -329,6 +333,7 @@ class TestCLICommands:
         import argparse
 
         from import_service.cli import cmd_stats
+
         args = argparse.Namespace()
         with (
             patch("import_service.cli.ensure_indexes"),
@@ -344,6 +349,7 @@ class TestCLICommands:
         import argparse
 
         from import_service.cli import cmd_expire
+
         args = argparse.Namespace(dry_run=True, limit=0, max_age_days=0)
         with (
             patch("import_service.cli.ensure_indexes"),
@@ -355,6 +361,7 @@ class TestCLICommands:
 
     def test_cli_parser_commands_exist(self):
         from import_service.cli import build_parser
+
         parser = build_parser()
         # import
         args = parser.parse_args(["import"])
@@ -377,6 +384,7 @@ class TestCLICommands:
 
     def test_dict_to_raw_job_valid(self):
         from import_service.cli import _dict_to_raw_job
+
         d = {
             "url": "https://jobs.example.com/123",
             "title": "Senior Python Dev",
@@ -392,6 +400,7 @@ class TestCLICommands:
 
     def test_dict_to_raw_job_link_fallback(self):
         from import_service.cli import _dict_to_raw_job
+
         d = {
             "link": "https://jobs.example.com/456",
             "title": "Dev",
@@ -405,6 +414,7 @@ class TestCLICommands:
 
     def test_dict_to_raw_job_missing_required_returns_none(self):
         from import_service.cli import _dict_to_raw_job
+
         # Missing url
         d = {"title": "Dev", "description": "Desc", "company_name": "Corp", "source": "x"}
         assert _dict_to_raw_job(d) is None

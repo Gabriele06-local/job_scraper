@@ -41,17 +41,13 @@ class RSSScraper(BaseScraper):
                                 "name": "Unknown"
                             },  # RSS often lacks company in standard fields
                             "description": self.clean_description(
-                                item.find("description").text
-                                if item.find("description")
-                                else ""
+                                item.find("description").text if item.find("description") else ""
                             ),
                             "link": item.find("link").text if item.find("link") else "",
                             "source": "RSS Feed",
                             "original_language": lang,
                             "published_at": (
-                                item.find("pubDate").text
-                                if item.find("pubDate")
-                                else None
+                                item.find("pubDate").text if item.find("pubDate") else None
                             ),
                         }
                     )
