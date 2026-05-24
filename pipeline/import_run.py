@@ -130,7 +130,10 @@ class ImportRunTracker:
         recent = list(
             self._col.find(
                 {"provider_name": provider_name},
-                sort=[("started_at", pymongo.DESCENDING)],
+                sort=[
+                    ("started_at", pymongo.DESCENDING),
+                    ("_id", pymongo.DESCENDING),
+                ],
                 limit=_MAX_CONSECUTIVE_FAILURES,
             )
         )
@@ -143,7 +146,10 @@ class ImportRunTracker:
         count = 0
         for doc in self._col.find(
             {"provider_name": provider_name},
-            sort=[("started_at", pymongo.DESCENDING)],
+            sort=[
+                ("started_at", pymongo.DESCENDING),
+                ("_id", pymongo.DESCENDING),
+            ],
             limit=_MAX_CONSECUTIVE_FAILURES,
         ):
             if doc["status"] == "failed":

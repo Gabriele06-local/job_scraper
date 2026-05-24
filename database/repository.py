@@ -61,6 +61,56 @@ def get_seniorities() -> Collection:  # type: ignore[type-arg]
     return get_db()["seniorities"]
 
 
+def get_providers() -> Collection:  # type: ignore[type-arg]
+    """Typed accessor for the providers collection (backoffice enable/disable)."""
+    return get_db()["providers"]
+
+
+# Slugs that were enabled in code before the DB-backed provider gate landed.
+# Used as a fallback in `is_provider_enabled` so that an un-seeded DB does
+# NOT silently disable the whole pipeline. New providers (added after the
+# `providers` collection was introduced) are NOT in this list — they must
+# be explicitly enabled via the backoffice / seed script.
+_LEGACY_ENABLED_SLUGS: frozenset[str] = frozenset(
+    {
+        "adzuna",
+        "arbeitnow",
+        "ashby",
+        "greenhouse",
+        "himalayas",
+        "iprogrammatori",
+        "jobicy",
+        "jooble",
+        "jsearch",
+        "lever",
+        "personio",
+        "reed",
+        "remoteok",
+        "remotive",
+        "rss",
+        "themuse",
+    }
+)
+
+
+def is_provider_enabled(slug: str) -> bool:
+    """Return True if the provider is enabled in the DB.
+
+    Consult `providers` collection first; if no document exists for `slug`,
+    fall back to the legacy whitelist so pre-existing connectors keep working
+    on un-seeded environments. New connectors default to disabled.
+    Any DB error degrades to the same fallback (logged at WARNING).
+    """
+    try:
+        doc = get_providers().find_one({"slug": slug}, {"enabled": 1})
+    except Exception as exc:  # noqa: BLE001 — DB-level fallback is intentional
+        logger.warning("providers.lookup_failed", slug=slug, error=str(exc))
+        return slug in _LEGACY_ENABLED_SLUGS
+    if doc is None:
+        return slug in _LEGACY_ENABLED_SLUGS
+    return bool(doc.get("enabled", False))
+
+
 def ensure_indexes() -> None:
     """Create all required indexes idempotently.
 
@@ -70,6 +120,7 @@ def ensure_indexes() -> None:
     db = get_db()
     _ensure_jobs_indexes(db)
     _ensure_companies_indexes(db)
+    _ensure_providers_indexes(db)
     logger.info("mongo.indexes_ready")
 
 
@@ -182,6 +233,20 @@ def _ensure_companies_indexes(db: Database) -> None:  # type: ignore[type-arg]
         logger.info("mongo.companies_indexes_created")
     except OperationFailure as e:
         logger.error("mongo.companies_indexes_failed", error=str(e))
+        raise
+
+
+def _ensure_providers_indexes(db: Database) -> None:  # type: ignore[type-arg]
+    providers = db["providers"]
+    indexes = [
+        IndexModel([("slug", ASCENDING)], unique=True, name="slug_unique"),
+    ]
+    try:
+        _dedupe_field(providers, "slug")
+        providers.create_indexes(indexes)
+        logger.info("mongo.providers_indexes_created")
+    except OperationFailure as e:
+        logger.error("mongo.providers_indexes_failed", error=str(e))
         raise
 
 

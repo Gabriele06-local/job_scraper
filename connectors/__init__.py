@@ -18,22 +18,30 @@ import structlog
 
 from config import settings
 
+from .active_jobs_db import ActiveJobsDbConnector
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
 from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
+from .faang_watch import FaangWatchConnector
 from .greenhouse import GreenhouseConnector
 from .himalayas import HimalayasConnector
+from .hn_hiring import HNHiringConnector
+from .hn_realtime import HNRealtimeConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
 from .jooble import JoobleConnector
+from .jsearch import JSearchConnector
 from .lever import LeverConnector
 from .personio import PersonioConnector
 from .reed import ReedConnector
 from .remoteok import RemoteOKConnector
 from .remotive import RemotiveConnector
 from .rss import RSSConnector
+from .startup_jobs import StartupJobsConnector
 from .themuse import TheMuseConnector
+from .workday_jobs import WorkdayJobsConnector
+from .yc_jobs import YCJobsConnector
 
 if TYPE_CHECKING:
     pass
@@ -64,32 +72,54 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "remotive": ConnectorEntry(cls=RemotiveConnector, enabled=True),
     "themuse": ConnectorEntry(cls=TheMuseConnector, enabled=True),
     "reed": ConnectorEntry(cls=ReedConnector, enabled=True),
+    "jsearch": ConnectorEntry(cls=JSearchConnector, enabled=True),
     "greenhouse": ConnectorEntry(cls=GreenhouseConnector, enabled=True),
     "lever": ConnectorEntry(cls=LeverConnector, enabled=True),
     "ashby": ConnectorEntry(cls=AshbyConnector, enabled=True),
     "personio": ConnectorEntry(cls=PersonioConnector, enabled=True),
+    # New RapidAPI connectors — code-level enabled, DB-gated (disabled by
+    # default in seed_providers; enable per-slug from the backoffice).
+    "active_jobs_db": ConnectorEntry(cls=ActiveJobsDbConnector, enabled=True),
+    "workday_jobs": ConnectorEntry(cls=WorkdayJobsConnector, enabled=True),
+    "startup_jobs": ConnectorEntry(cls=StartupJobsConnector, enabled=True),
+    "hn_hiring": ConnectorEntry(cls=HNHiringConnector, enabled=True),
+    "yc_jobs": ConnectorEntry(cls=YCJobsConnector, enabled=True),
+    "faang_watch": ConnectorEntry(cls=FaangWatchConnector, enabled=True),
+    "hn_realtime": ConnectorEntry(cls=HNRealtimeConnector, enabled=True),
 }
 
 
 def get_enabled_connectors() -> list[BaseConnector]:
     """Instantiate and return enabled connectors.
 
-    Respects settings.disabled_connectors for runtime overrides.
+    Gate order (highest priority first):
+      1. `settings.disabled_connectors` env override — skip if listed.
+      2. `providers.enabled` flag in MongoDB — skip if False. Un-seeded slugs
+         fall back to a legacy whitelist (see `is_provider_enabled`).
+      3. `REGISTRY[name].enabled` code-level flag — skip if False
+         (kept as a hard kill-switch for known-broken connectors).
     Logs a warning if instantiation fails; skips that connector.
     """
+    # Local import to keep this module importable in unit tests that don't
+    # have MongoDB available; the DB call only happens at run time.
+    from database.repository import is_provider_enabled
+
     runtime_disabled = {n.lower() for n in settings.disabled_connectors}
     result: list[BaseConnector] = []
 
     for name, entry in REGISTRY.items():
+        if name in runtime_disabled:
+            log.info("connector.runtime_disabled", name=name)
+            continue
+        if not is_provider_enabled(name):
+            log.info("connector.db_disabled", name=name)
+            continue
         if not entry.enabled:
             log.debug(
                 "connector.skipped",
                 name=name,
                 reason=entry.disabled_reason,
             )
-            continue
-        if name in runtime_disabled:
-            log.info("connector.runtime_disabled", name=name)
             continue
         try:
             result.append(entry.cls())
@@ -100,16 +130,21 @@ def get_enabled_connectors() -> list[BaseConnector]:
 
 
 __all__ = [
+    "ActiveJobsDbConnector",
     "AdzunaConnector",
     "ArbeitnowConnector",
     "AshbyConnector",
     "BaseConnector",
     "ConnectorEntry",
+    "FaangWatchConnector",
     "GreenhouseConnector",
     "HimalayasConnector",
+    "HNHiringConnector",
+    "HNRealtimeConnector",
     "IProgrammatoriConnector",
     "JobicyConnector",
     "JoobleConnector",
+    "JSearchConnector",
     "LeverConnector",
     "PersonioConnector",
     "REGISTRY",
@@ -118,6 +153,9 @@ __all__ = [
     "RemotiveConnector",
     "RSSConnector",
     "SourceType",
+    "StartupJobsConnector",
     "TheMuseConnector",
+    "WorkdayJobsConnector",
+    "YCJobsConnector",
     "get_enabled_connectors",
 ]

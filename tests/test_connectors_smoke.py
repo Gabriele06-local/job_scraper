@@ -22,12 +22,14 @@ from connectors.jobicy import JobicyConnector
 from connectors.jooble import JoobleConnector
 from connectors.remoteok import RemoteOKConnector
 from connectors.rss import RSSConnector
+from database.repository import _LEGACY_ENABLED_SLUGS
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _EXPECTED_REGISTRY_KEYS = {
+    # legacy (DB-fallback enabled)
     "adzuna",
     "jooble",
     "iprogrammatori",
@@ -39,13 +41,26 @@ _EXPECTED_REGISTRY_KEYS = {
     "remotive",
     "themuse",
     "reed",
+    "jsearch",
     "greenhouse",
     "lever",
     "ashby",
     "personio",
+    # new RapidAPI providers (DB-gated, disabled by default in seed)
+    "active_jobs_db",
+    "workday_jobs",
+    "startup_jobs",
+    "hn_hiring",
+    "yc_jobs",
+    "faang_watch",
+    "hn_realtime",
 }
 
-_ENABLED_COUNT = sum(1 for e in REGISTRY.values() if e.enabled)
+# get_enabled_connectors() consults the DB-backed `providers` collection.
+# On an un-seeded test environment the lookup falls back to the legacy
+# whitelist (see database.repository.is_provider_enabled), so the expected
+# count equals the size of that whitelist.
+_ENABLED_COUNT = len(_LEGACY_ENABLED_SLUGS)
 
 
 def _mock_json_response(payload: dict) -> MagicMock:
@@ -82,9 +97,13 @@ def test_registry_completeness() -> None:
     assert set(REGISTRY.keys()) == _EXPECTED_REGISTRY_KEYS
 
 
-def test_all_connectors_enabled() -> None:
+def test_all_connectors_enabled_or_documented() -> None:
+    """Every entry is code-enabled, or carries a disabled_reason."""
     for name, entry in REGISTRY.items():
-        assert entry.enabled, f"{name}: must be enabled (remove disabled connectors instead)"
+        if not entry.enabled:
+            assert entry.disabled_reason, (
+                f"{name}: disabled connectors must declare a disabled_reason"
+            )
 
 
 def test_all_connectors_have_required_class_attrs() -> None:
@@ -103,8 +122,22 @@ def test_all_connectors_inherit_base() -> None:
 
 
 def test_get_enabled_connectors_count() -> None:
+    """At minimum the legacy whitelist must instantiate; more is fine.
+
+    `get_enabled_connectors()` consults the live DB, so providers the
+    backoffice has flipped on (beyond the legacy whitelist) show up too.
+    We assert the floor — never below the whitelist — and never any
+    code-level disabled entry (e.g. faang_watch).
+    """
     connectors = get_enabled_connectors()
-    assert len(connectors) == _ENABLED_COUNT
+    code_disabled = {n for n, e in REGISTRY.items() if not e.enabled}
+    assert len(connectors) >= _ENABLED_COUNT - len(code_disabled & _LEGACY_ENABLED_SLUGS)
+    for c in connectors:
+        # No code-disabled connector should be instantiated.
+        cls_name = type(c).__name__
+        for name, entry in REGISTRY.items():
+            if entry.cls is type(c) and not entry.enabled:
+                raise AssertionError(f"{cls_name} ({name}) is code-disabled but instantiated")
 
 
 def test_get_enabled_connectors_all_base() -> None:

@@ -18,6 +18,7 @@ from models.job import (
     RoleFamily,
     Seniority,
 )
+from models.provider import ProviderConfig
 
 __all__ = [
     "EmploymentType",
@@ -32,6 +33,7 @@ __all__ = [
     "JobSource",
     "JobStatus",
     "Language",
+    "ProviderConfig",
     "RawJob",
     "RemoteMode",
     "RoleFamily",
