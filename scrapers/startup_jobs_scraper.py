@@ -92,7 +92,11 @@ class StartupJobsScraper:
                     )
                     resp.raise_for_status()
                     payload = resp.json()
-                    items = payload if isinstance(payload, list) else payload.get("data") or payload.get("jobs") or []
+                    items = (
+                        payload
+                        if isinstance(payload, list)
+                        else payload.get("data") or payload.get("jobs") or []
+                    )
                     if not items:
                         break
                     for item in items:
@@ -121,17 +125,13 @@ class StartupJobsScraper:
     def _normalize(self, item: dict) -> dict | None:
         try:
             title = _first_str(item, "title", "job_title", "position")
-            company = _first_str(
-                item, "organization", "company", "company_name"
-            )
+            company = _first_str(item, "organization", "company", "company_name")
             url = _first_str(item, "url", "job_url", "apply_url")
             if not (title and company and url):
                 return None
 
             location = _first_str(item, "location", "city", "location_raw")
-            posted_dt = _parse_iso(
-                _first_str(item, "date_posted", "posted_at", "published_at")
-            )
+            posted_dt = _parse_iso(_first_str(item, "date_posted", "posted_at", "published_at"))
 
             return {
                 "title": title,

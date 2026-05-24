@@ -246,7 +246,7 @@ def test_job_to_mongo_doc_salary_explicit_overrides_classification():
     )
     doc = job.to_mongo_doc()
     assert doc["salary_min"] == 90000  # explicit wins
-    assert doc["currency"] == "USD"    # explicit wins
+    assert doc["currency"] == "USD"  # explicit wins
 
 
 def test_job_from_mongo_doc_round_trip():

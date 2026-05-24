@@ -116,9 +116,7 @@ class TestComputeQualityScore:
 
 class TestPassesQualityGate:
     def test_valid_classification_passes(self):
-        ok, reasons = passes_quality_gate(
-            _cls(), company_name="Acme", description=_LONG_DESC
-        )
+        ok, reasons = passes_quality_gate(_cls(), company_name="Acme", description=_LONG_DESC)
         assert ok is True
         assert reasons == []
 
@@ -129,9 +127,7 @@ class TestPassesQualityGate:
 
     def test_invalid_company_sentinel_rejects(self):
         for sentinel in ("Unknown Company", "n/a", "Various", "Private", "Anonymous"):
-            ok, reasons = passes_quality_gate(
-                _cls(), company_name=sentinel, description=_LONG_DESC
-            )
+            ok, reasons = passes_quality_gate(_cls(), company_name=sentinel, description=_LONG_DESC)
             assert not ok, f"sentinel {sentinel!r} should reject"
             assert reasons == [QualityRejectReason.MISSING_COMPANY.value]
 
@@ -235,10 +231,12 @@ class TestIsDescriptionMeaningful:
             ),
             (
                 # Closes with HTML tag -> accept end heuristic (>=200 chars)
-                ("<p>Senior Python developer wanted to ship code in production daily. "
-                 "You will own the backend services and mentor the wider engineering "
-                 "team across the organisation. We value tests deeply for every change "
-                 "we ship to production.</p>"),
+                (
+                    "<p>Senior Python developer wanted to ship code in production daily. "
+                    "You will own the backend services and mentor the wider engineering "
+                    "team across the organisation. We value tests deeply for every change "
+                    "we ship to production.</p>"
+                ),
                 True,
                 "ends with HTML close tag",
             ),
@@ -410,8 +408,6 @@ class TestQualityGateGroundTruth:
                 description=inp["description"],
             )
             if not ok:
-                failures.append(
-                    f"{inp['title'][:40]}: gate rejected with {reasons}"
-                )
+                failures.append(f"{inp['title'][:40]}: gate rejected with {reasons}")
 
         assert not failures, "Expected-valid fixtures failed gate:\n" + "\n".join(failures)

@@ -24,9 +24,7 @@ _MAX_PAGES = 5
 _RATE_LIMIT_S = 0.5
 _COMPANIES = ["Amazon", "Google", "Meta", "Apple", "Netflix"]
 # Restrict to dev-focused categories; the API accepts a JSON array string.
-_CATEGORIES_JSON = json.dumps(
-    ["Software Engineering", "Cloud Engineering", "Systems Engineering"]
-)
+_CATEGORIES_JSON = json.dumps(["Software Engineering", "Cloud Engineering", "Systems Engineering"])
 _FRESHNESS = "month"
 
 
@@ -53,11 +51,7 @@ def _join_location(item: dict) -> str:
     if isinstance(parsed, list) and parsed:
         first = parsed[0]
         if isinstance(first, dict):
-            parts = [
-                str(first.get(k, ""))
-                for k in ("city", "state", "country")
-                if first.get(k)
-            ]
+            parts = [str(first.get(k, "")) for k in ("city", "state", "country") if first.get(k)]
             joined = ", ".join(p for p in parts if p)
             if joined:
                 return joined
@@ -103,19 +97,15 @@ class FaangWatchScraper:
                     )
                     resp.raise_for_status()
                     payload = resp.json()
-                    items = (
-                        payload.get("batch")
-                        if isinstance(payload, dict)
-                        else None
-                    ) or (payload if isinstance(payload, list) else [])
+                    items = (payload.get("batch") if isinstance(payload, dict) else None) or (
+                        payload if isinstance(payload, list) else []
+                    )
                     if not items:
                         break
                     for item in items:
                         if not isinstance(item, dict):
                             continue
-                        eid = _first_str(item, "job_id", "id") or _first_str(
-                            item, "company_url"
-                        )
+                        eid = _first_str(item, "job_id", "id") or _first_str(item, "company_url")
                         if not eid or eid in seen_ids:
                             continue
                         seen_ids.add(eid)
@@ -145,9 +135,7 @@ class FaangWatchScraper:
             if not (title and company and url):
                 return None
 
-            posted_dt = _parse_iso(
-                _first_str(item, "earliest_date", "date_posted", "posted_at")
-            )
+            posted_dt = _parse_iso(_first_str(item, "earliest_date", "date_posted", "posted_at"))
 
             return {
                 "title": title,

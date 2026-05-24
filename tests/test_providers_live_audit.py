@@ -72,7 +72,7 @@ def _print_table(results: list[dict]) -> None:
     print(f"{'Provider':<20} {'Jobs':>6} {'Pass%':>7} {'Time(s)':>8}  Status")
     print("-" * 60)
     for r in results:
-        pct = f"{r['pass_rate']*100:.0f}%" if r["jobs"] else "N/A"
+        pct = f"{r['pass_rate'] * 100:.0f}%" if r["jobs"] else "N/A"
         flag = ""
         if r["status"] == "ERROR":
             flag = "  [ERROR]"
@@ -82,9 +82,7 @@ def _print_table(results: list[dict]) -> None:
             flag = "  [LOW PASS RATE]"
         elif r["elapsed"] > _RESPONSE_TIME_WARN:
             flag = "  [SLOW]"
-        print(
-            f"{r['name']:<20} {r['jobs']:>6} {pct:>7} {r['elapsed']:>8.1f}{flag}"
-        )
+        print(f"{r['name']:<20} {r['jobs']:>6} {pct:>7} {r['elapsed']:>8.1f}{flag}")
     print()
 
 
@@ -108,9 +106,7 @@ def test_provider_live(name: str) -> None:
         pytest.fail(f"{name}: returned zero jobs")
 
     if result["pass_rate"] < _PASS_RATE_WARN:
-        pytest.xfail(
-            f"{name}: pass rate {result['pass_rate']:.0%} < {_PASS_RATE_WARN:.0%}"
-        )
+        pytest.xfail(f"{name}: pass rate {result['pass_rate']:.0%} < {_PASS_RATE_WARN:.0%}")
 
     if result["elapsed"] > _RESPONSE_TIME_WARN:
         pytest.xfail(f"{name}: response time {result['elapsed']:.1f}s > {_RESPONSE_TIME_WARN}s")

@@ -50,9 +50,7 @@ def test_consume_returns_true_within_limit(budget: DailyBudget) -> None:
 
 def test_consume_returns_false_over_limit(budget: DailyBudget) -> None:
     # Fill to limit.
-    budget._col.insert_one(
-        {"provider": "adzuna", "date": "2099-12-31", "calls": 10}
-    )
+    budget._col.insert_one({"provider": "adzuna", "date": "2099-12-31", "calls": 10})
     with patch("pipeline.budget._today_key", return_value="2099-12-31"):
         result = budget.consume(limit=10)
     assert not result

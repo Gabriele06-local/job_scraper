@@ -226,9 +226,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     if not args.dry_run and all_raw:
         validator = build_url_validator()
         try:
-            url_results = asyncio.run(
-                validator.validate_many([j.url for j in all_raw])
-            )
+            url_results = asyncio.run(validator.validate_many([j.url for j in all_raw]))
         except Exception as exc:  # noqa: BLE001 — network code is fragile
             log.warning("cli.import.url_validator_failed", error=str(exc))
             url_results = {}
@@ -244,9 +242,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         connector_raw = per_source_raw.get(record.provider_name, [])
         connector_urls = {r.url for r in connector_raw}
         record.url_invalid_count = sum(
-            1
-            for u, r in url_results.items()
-            if u in connector_urls and not r.is_valid
+            1 for u, r in url_results.items() if u in connector_urls and not r.is_valid
         )
         # Best-effort jobs_stored attribution from per-source raw counts:
         # the per-connector slice can't tell which were rejected vs persisted,

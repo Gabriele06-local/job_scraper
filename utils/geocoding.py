@@ -4,6 +4,7 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
 class Geocoder:
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -12,24 +13,21 @@ class Geocoder:
         """Fetch GPS coordinates from Google Maps Geocoding API"""
         if not self.api_key or not address:
             return None
-            
+
         url = "https://maps.googleapis.com/maps/api/geocode/json"
-        params = {
-            "address": address,
-            "key": self.api_key
-        }
-        
+        params = {"address": address, "key": self.api_key}
+
         try:
             response = requests.get(url, params=params)
             data = response.json()
-            
-            if data['status'] == 'OK':
-                result = data['results'][0]
-                location = result['geometry']['location']
+
+            if data["status"] == "OK":
+                result = data["results"][0]
+                location = result["geometry"]["location"]
                 return {
-                    "lat": location['lat'],
-                    "lng": location['lng'],
-                    "formatted_address": result.get('formatted_address')
+                    "lat": location["lat"],
+                    "lng": location["lng"],
+                    "formatted_address": result.get("formatted_address"),
                 }
             else:
                 logger.warning(f"Geocoding failed for {address}: {data['status']}")

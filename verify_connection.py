@@ -14,9 +14,7 @@ def verify_connection():
     db_name = os.getenv("MONGO_DB")
 
     if not uri:
-        print(
-            "❌ MongoDB URI not found in environment variables (checked DATABASE_URL, MONGO_URI)"
-        )
+        print("❌ MongoDB URI not found in environment variables (checked DATABASE_URL, MONGO_URI)")
         sys.exit(1)
 
     # Extract database from URI if not provided via MONGO_DB

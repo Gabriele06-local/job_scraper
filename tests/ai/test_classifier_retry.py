@@ -126,7 +126,5 @@ def test_retry_hint_injected_into_prompt(mock_client) -> None:
     clf.classify(_payload())
 
     second_call_kwargs = mock_client.chat.completions.create.call_args_list[1].kwargs
-    user_msg = next(
-        m["content"] for m in second_call_kwargs["messages"] if m["role"] == "user"
-    )
+    user_msg = next(m["content"] for m in second_call_kwargs["messages"] if m["role"] == "user")
     assert "unknowable from the text" in user_msg or "do not invent" in user_msg.lower()

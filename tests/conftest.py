@@ -16,6 +16,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures" / "ground_truth"
 # Ground truth loader
 # ---------------------------------------------------------------------------
 
+
 def _load_fixture(path: Path) -> dict[str, Any]:
     with path.open() as f:
         return json.load(f)
@@ -36,7 +37,8 @@ def ground_truth_all() -> list[dict[str, Any]]:
 def ground_truth_pass(ground_truth_all: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Fixtures expected to reach valid or premium status."""
     return [
-        f for f in ground_truth_all
+        f
+        for f in ground_truth_all
         if f["expected_output"]["expected_status"] in ("valid", "premium")
     ]
 
@@ -45,7 +47,8 @@ def ground_truth_pass(ground_truth_all: list[dict[str, Any]]) -> list[dict[str, 
 def ground_truth_reject_prefilter(ground_truth_all: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Fixtures expected to be rejected at the pre-filter stage."""
     return [
-        f for f in ground_truth_all
+        f
+        for f in ground_truth_all
         if f["expected_output"]["expected_status"] == "rejected_prefilter"
     ]
 
@@ -54,14 +57,14 @@ def ground_truth_reject_prefilter(ground_truth_all: list[dict[str, Any]]) -> lis
 def ground_truth_reject_quality(ground_truth_all: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Fixtures expected to be rejected at the quality gate."""
     return [
-        f for f in ground_truth_all
-        if f["expected_output"]["expected_status"] == "rejected_quality"
+        f for f in ground_truth_all if f["expected_output"]["expected_status"] == "rejected_quality"
     ]
 
 
 # ---------------------------------------------------------------------------
 # MongoDB mock (mongomock)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mongo_client():
@@ -98,6 +101,7 @@ def companies_collection(mongo_db):
 # Groq client mock — returns fixture ai_output deterministically
 # ---------------------------------------------------------------------------
 
+
 def _make_groq_response(ai_output: dict[str, Any]) -> MagicMock:
     """Build a mock Groq ChatCompletion response for a given ai_output dict."""
     choice = MagicMock()
@@ -111,17 +115,14 @@ def _make_groq_response(ai_output: dict[str, Any]) -> MagicMock:
 def mock_groq_client(ground_truth_all: list[dict[str, Any]]):
     """Mock Groq client that dispatches fixed responses by offer title."""
     title_to_ai_output: dict[str, Any] = {
-        f["input"]["title"]: f["expected_output"].get("ai_output")
-        for f in ground_truth_all
+        f["input"]["title"]: f["expected_output"].get("ai_output") for f in ground_truth_all
     }
 
     client = MagicMock()
 
     def _chat_create(**kwargs: Any) -> MagicMock:
         messages = kwargs.get("messages", [])
-        user_content = next(
-            (m["content"] for m in messages if m.get("role") == "user"), ""
-        )
+        user_content = next((m["content"] for m in messages if m.get("role") == "user"), "")
         matched_output: dict[str, Any] | None = None
         for title, ai_output in title_to_ai_output.items():
             if title in user_content:

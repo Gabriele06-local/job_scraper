@@ -93,7 +93,11 @@ class WorkdayJobsScraper:
                     )
                     resp.raise_for_status()
                     payload = resp.json()
-                    items = payload if isinstance(payload, list) else payload.get("data") or payload.get("jobs") or []
+                    items = (
+                        payload
+                        if isinstance(payload, list)
+                        else payload.get("data") or payload.get("jobs") or []
+                    )
                     if not items:
                         break
                     for item in items:
@@ -122,9 +126,7 @@ class WorkdayJobsScraper:
     def _normalize(self, item: dict) -> dict | None:
         try:
             title = _first_str(item, "title", "job_title", "position")
-            company = _first_str(
-                item, "organization", "company", "company_name", "employer_name"
-            )
+            company = _first_str(item, "organization", "company", "company_name", "employer_name")
             url = _first_str(item, "url", "job_url", "apply_url", "external_url")
             if not (title and company and url):
                 return None
@@ -138,9 +140,7 @@ class WorkdayJobsScraper:
                     parts = [str(loc_obj.get(k, "")) for k in ("city", "country")]
                     location = ", ".join(p for p in parts if p)
 
-            posted_dt = _parse_iso(
-                _first_str(item, "date_posted", "posted_at", "published_at")
-            )
+            posted_dt = _parse_iso(_first_str(item, "date_posted", "posted_at", "published_at"))
 
             return {
                 "title": title,

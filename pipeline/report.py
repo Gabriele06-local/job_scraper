@@ -19,9 +19,9 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import pymongo
-from pymongo.errors import OperationFailure
 import structlog
 from pymongo.collection import Collection
+from pymongo.errors import OperationFailure
 
 from pipeline.import_run import ImportRunRecord
 
@@ -184,9 +184,7 @@ class ImportReportTracker:
         if source_run.errors:
             errors_to_push.extend(source_run.errors[:_MAX_ERRORS])
         if source_run.connector_crashed and source_run.crash_reason:
-            errors_to_push.append(
-                f"[{source_run.provider_name}] {source_run.crash_reason}"
-            )
+            errors_to_push.append(f"[{source_run.provider_name}] {source_run.crash_reason}")
 
         try:
             update: dict[str, dict] = {"$inc": update_inc}

@@ -5,6 +5,7 @@ from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
+
 class JobCategorizer:
     def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
         self.client = AsyncOpenAI(api_key=api_key)
@@ -34,20 +35,23 @@ class JobCategorizer:
         
         Return ONLY valid JSON.
         """
-        
+
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a professional technical recruiter and data analyst."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a professional technical recruiter and data analyst.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
             )
-            
+
             content = response.choices[0].message.content
             return json.loads(content)
-            
+
         except Exception as e:
             logger.error(f"Error categorizing job with AI: {e}")
             return None

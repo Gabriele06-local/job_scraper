@@ -17,7 +17,12 @@ from pipeline.language_detector import detect_language
 logger = structlog.get_logger(__name__)
 
 _SUPPORTED_LANGUAGES = {
-    Language.EN, Language.IT, Language.ES, Language.DE, Language.FR, Language.PT
+    Language.EN,
+    Language.IT,
+    Language.ES,
+    Language.DE,
+    Language.FR,
+    Language.PT,
 }
 
 _INVALID_COMPANY_NAMES = {"", "unknown", "n/a", "none"}

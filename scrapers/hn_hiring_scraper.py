@@ -99,12 +99,9 @@ class HNHiringScraper:
                     if isinstance(reported, int) and reported > 0:
                         total_pages = min(reported, _MAX_PAGES)
                 items = (
-                    payload.get("items")
-                    or payload.get("jobs")
-                    or payload.get("data")
-                    or []
-                ) if isinstance(payload, dict) else (
-                    payload if isinstance(payload, list) else []
+                    (payload.get("items") or payload.get("jobs") or payload.get("data") or [])
+                    if isinstance(payload, dict)
+                    else (payload if isinstance(payload, list) else [])
                 )
                 if not items:
                     break
@@ -163,9 +160,7 @@ class HNHiringScraper:
 
                 keywords = role.get("keywords") or []
                 if isinstance(keywords, list) and keywords:
-                    keywords_summary = (
-                        "Keywords: " + ", ".join(str(k) for k in keywords if k)
-                    )
+                    keywords_summary = "Keywords: " + ", ".join(str(k) for k in keywords if k)
 
                 results.append(
                     {

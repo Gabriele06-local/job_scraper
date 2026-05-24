@@ -195,9 +195,7 @@ class TestPrefilterPass:
 
     def test_original_language_trusted(self):
         # Even if description is gibberish, scraper-declared lang is trusted
-        ok, _ = should_send_to_ai(
-            _raw(description="xyz " * 60, original_language="en")
-        )
+        ok, _ = should_send_to_ai(_raw(description="xyz " * 60, original_language="en"))
         assert ok is True
 
 
@@ -569,9 +567,7 @@ class TestGroundTruthPrefilter:
     def test_prefilter_reject_count_and_pass_count(self):
         """Report distribution; logged so CI output captures it."""
         fixtures = _load_fixtures()
-        pass_count = sum(
-            1 for f in fixtures if f["expected_output"]["should_pass_prefilter"]
-        )
+        pass_count = sum(1 for f in fixtures if f["expected_output"]["should_pass_prefilter"])
         reject_count = len(fixtures) - pass_count
         total = len(fixtures)
 

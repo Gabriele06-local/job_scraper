@@ -114,9 +114,7 @@ def test_unknown_seniority_after_retry() -> None:
 def test_unknown_employment_type_after_retry() -> None:
     job = _job(classification=_cls(employment_type=EmploymentType.UNKNOWN))
     out = evaluate(job)
-    assert (
-        out.reject_reason == QualityRejectReason.UNKNOWN_EMPLOYMENT_TYPE_AFTER_RETRY.value
-    )
+    assert out.reject_reason == QualityRejectReason.UNKNOWN_EMPLOYMENT_TYPE_AFTER_RETRY.value
 
 
 def test_unknown_remote_mode_after_retry() -> None:

@@ -59,17 +59,13 @@ class IProgrammatoriScraper(BaseScraper):
                         "title": title,
                         "company": {
                             "name": (
-                                item.find("company").text
-                                if item.find("company")
-                                else "Unknown"
+                                item.find("company").text if item.find("company") else "Unknown"
                             ),
                             "logo": None,
                         },
                         "description": self.clean_description(description),
                         "link": link,
-                        "location_raw": (
-                            item.find("city").text if item.find("city") else ""
-                        ),
+                        "location_raw": (item.find("city").text if item.find("city") else ""),
                         "source": "IProgrammatori",
                         "original_language": "it",
                         "published_at": pub_date,

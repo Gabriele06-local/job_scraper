@@ -32,7 +32,7 @@ class GreenhouseScraper:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             batch_size = _CONCURRENCY
             for i in range(0, len(companies), batch_size):
-                batch = companies[i: i + batch_size]
+                batch = companies[i : i + batch_size]
                 tasks = [self._fetch_company(client, sem, c) for c in batch]
                 batch_results = await asyncio.gather(*tasks, return_exceptions=True)
                 for res in batch_results:

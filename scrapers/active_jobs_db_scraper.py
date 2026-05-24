@@ -96,7 +96,11 @@ class ActiveJobsDbScraper:
                     )
                     resp.raise_for_status()
                     payload = resp.json()
-                    items = payload if isinstance(payload, list) else payload.get("data") or payload.get("jobs") or []
+                    items = (
+                        payload
+                        if isinstance(payload, list)
+                        else payload.get("data") or payload.get("jobs") or []
+                    )
                     if not items:
                         break
                     for item in items:
@@ -126,16 +130,12 @@ class ActiveJobsDbScraper:
         """Map an Active Jobs DB item to the RawJob dict shape."""
         try:
             title = _first_str(item, "title", "job_title", "position")
-            company = _first_str(
-                item, "organization", "company", "company_name", "employer_name"
-            )
+            company = _first_str(item, "organization", "company", "company_name", "employer_name")
             url = _first_str(item, "url", "job_url", "apply_url", "application_url")
             if not (title and company and url):
                 return None
 
-            location = _first_str(
-                item, "location", "locations_derived", "city", "location_raw"
-            )
+            location = _first_str(item, "location", "locations_derived", "city", "location_raw")
             if not location:
                 loc_obj = item.get("location_derived") or item.get("locations")
                 if isinstance(loc_obj, list) and loc_obj:

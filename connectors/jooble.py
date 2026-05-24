@@ -33,9 +33,7 @@ class JoobleConnector(BaseConnector):
         for lang in self._languages:
             for keyword in self._keywords:
                 try:
-                    jobs = asyncio.run(
-                        self._scraper.scrape(keyword=keyword, lang=lang)
-                    )
+                    jobs = asyncio.run(self._scraper.scrape(keyword=keyword, lang=lang))
                     log.debug(
                         "jooble.fetched",
                         keyword=keyword,

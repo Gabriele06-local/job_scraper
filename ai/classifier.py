@@ -87,19 +87,35 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
     "required": [
-        "skills", "category", "seniority", "role_family",
-        "employment_type", "remote_mode",
-        "salary_min", "salary_max", "currency",
-        "languages_required", "quality_flags", "confidence",
+        "skills",
+        "category",
+        "seniority",
+        "role_family",
+        "employment_type",
+        "remote_mode",
+        "salary_min",
+        "salary_max",
+        "currency",
+        "languages_required",
+        "quality_flags",
+        "confidence",
     ],
     "properties": {
         "skills": {"type": "array", "items": {"type": "string"}, "maxItems": 30},
         "category": {
             "type": ["string", "null"],
             "enum": [
-                "software-engineering", "devops-sysadmin", "data-ml", "design",
-                "product-management", "engineering-management", "security",
-                "qa-testing", "mobile", "other-it", None,
+                "software-engineering",
+                "devops-sysadmin",
+                "data-ml",
+                "design",
+                "product-management",
+                "engineering-management",
+                "security",
+                "qa-testing",
+                "mobile",
+                "other-it",
+                None,
             ],
         },
         "seniority": {
@@ -109,15 +125,29 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
         "role_family": {
             "type": "string",
             "enum": [
-                "frontend", "backend", "fullstack", "devops", "data",
-                "ml", "mobile", "qa", "security", "design", "pm", "other",
+                "frontend",
+                "backend",
+                "fullstack",
+                "devops",
+                "data",
+                "ml",
+                "mobile",
+                "qa",
+                "security",
+                "design",
+                "pm",
+                "other",
             ],
         },
         "employment_type": {
             "type": "string",
             "enum": [
-                "full_time", "part_time", "contract",
-                "freelance", "internship", "unknown",
+                "full_time",
+                "part_time",
+                "contract",
+                "freelance",
+                "internship",
+                "unknown",
             ],
         },
         "remote_mode": {
@@ -133,8 +163,13 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
             "items": {
                 "type": "string",
                 "enum": [
-                    "clear_jd", "has_responsibilities", "has_requirements",
-                    "has_benefits", "has_tech_stack", "vague", "boilerplate",
+                    "clear_jd",
+                    "has_responsibilities",
+                    "has_requirements",
+                    "has_benefits",
+                    "has_tech_stack",
+                    "vague",
+                    "boilerplate",
                 ],
             },
         },
@@ -146,7 +181,7 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
 _SYSTEM_PROMPT = (
     "You are a strict job-listing classifier. You receive a job offer and return ONLY "
     "a JSON object that conforms to the provided schema. No prose, no markdown, no "
-    "explanations. If a field is unknown, use the schema's \"unknown\" enum value or "
+    'explanations. If a field is unknown, use the schema\'s "unknown" enum value or '
     "null per the schema. Do not invent skills or salary numbers. Confidence is your "
     "self-assessment of overall extraction reliability (0..1)."
 )
@@ -351,9 +386,7 @@ class GroqClassifier:
                 return retried
         return result
 
-    def _call_groq(
-        self, job_raw: dict[str, Any], *, hint: str = ""
-    ) -> JobClassification | None:
+    def _call_groq(self, job_raw: dict[str, Any], *, hint: str = "") -> JobClassification | None:
         """Single classification round-trip with 3 API-level retries.
 
         On `RateLimitError`/`APITimeoutError`/`InternalServerError` we backoff and
@@ -373,7 +406,7 @@ class GroqClassifier:
                 )
                 return self._single_call(prompt)
             except (groq.RateLimitError, groq.APITimeoutError, groq.InternalServerError) as exc:
-                wait = min(2 ** attempt, 30) + random.random()
+                wait = min(2**attempt, 30) + random.random()
                 logger.warning(
                     "groq.api_retry",
                     attempt=attempt,

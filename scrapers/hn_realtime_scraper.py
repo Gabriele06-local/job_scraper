@@ -130,8 +130,13 @@ class HNRealtimeScraper:
 
             posted_dt = _parse_iso(
                 _first_str(
-                    item, "posted_date", "date", "posted_at", "published_at",
-                    "created_at", "scraped_at",
+                    item,
+                    "posted_date",
+                    "date",
+                    "posted_at",
+                    "published_at",
+                    "created_at",
+                    "scraped_at",
                 )
             ) or _epoch_to_dt(item.get("time") or item.get("timestamp"))
 
