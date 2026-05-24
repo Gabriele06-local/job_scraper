@@ -88,7 +88,9 @@ class ActiveJobsDbScraper:
                         params={
                             "limit": _PAGE_SIZE,
                             "offset": offset,
-                            "title_filter": keyword,
+                            # Fantastic.Jobs requires quoted filter
+                            # values for exact-match.
+                            "title_filter": f'"{keyword}"',
                         },
                         timeout=_TIMEOUT,
                     )

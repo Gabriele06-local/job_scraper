@@ -13,7 +13,7 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
-_BASE_URL = "https://free-y-combinator-jobs-api.p.rapidapi.com/active-jobs"
+_BASE_URL = "https://free-y-combinator-jobs-api.p.rapidapi.com/active-jb-7d"
 _RAPIDAPI_HOST = "free-y-combinator-jobs-api.p.rapidapi.com"
 _TIMEOUT = 30
 _PAGE_SIZE = 100

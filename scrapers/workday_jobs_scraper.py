@@ -13,7 +13,7 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
-_BASE_URL = "https://workday-jobs-api.p.rapidapi.com/active-jobs-7d"
+_BASE_URL = "https://workday-jobs-api.p.rapidapi.com/active-ats-24h"
 _RAPIDAPI_HOST = "workday-jobs-api.p.rapidapi.com"
 _TIMEOUT = 30
 _PAGE_SIZE = 100
@@ -85,7 +85,9 @@ class WorkdayJobsScraper:
                         params={
                             "limit": _PAGE_SIZE,
                             "offset": offset,
-                            "title_filter": keyword,
+                            # Fantastic.Jobs requires quoted filter
+                            # values for exact-match.
+                            "title_filter": f'"{keyword}"',
                         },
                         timeout=_TIMEOUT,
                     )
