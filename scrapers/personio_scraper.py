@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import time
 import xml.etree.ElementTree as ET
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -16,6 +17,29 @@ log = structlog.get_logger(__name__)
 
 _BASE_URL = "https://{slug}.jobs.personio.de/xml"
 _TIMEOUT = 10
+
+_PUBLISHED_TAGS = ("createdAt", "publishedAt", "created_at", "pubDate", "date", "postedAt")
+
+
+def _parse_personio_date(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.strip().rstrip("Z")
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%d",
+    ):
+        try:
+            dt = datetime.strptime(normalized, fmt)
+            if fmt.endswith("%z") and dt.tzinfo is None:
+                continue
+            return dt
+        except (ValueError, TypeError):
+            continue
+    return None
 
 
 class PersonioScraper:
@@ -60,6 +84,14 @@ class PersonioScraper:
                     description_parts.append("".join(desc_el.itertext()))
             description = "\n".join(description_parts)
 
+            published_at: datetime | None = None
+            for tag in _PUBLISHED_TAGS:
+                val = self._text(pos, tag)
+                parsed = _parse_personio_date(val)
+                if parsed is not None:
+                    published_at = parsed
+                    break
+
             jobs.append(
                 {
                     "title": title,
@@ -68,7 +100,7 @@ class PersonioScraper:
                     "url": url,
                     "source": "Personio",
                     "original_language": "de",
-                    "published_at": None,
+                    "published_at": published_at,
                     "location_raw": office,
                     "salary_min": None,
                     "salary_max": None,

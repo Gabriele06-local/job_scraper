@@ -62,12 +62,7 @@ class JoobleScraper(BaseScraper):
         }
 
         try:
-            # Disable SSL verification for Jooble API as it often has issues in some environments
-            import urllib3
-
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-            response = requests.post(url, json=payload, headers=headers, timeout=10, verify=False)
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
 
             if response.status_code == 403:
                 logger.error(

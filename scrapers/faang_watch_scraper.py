@@ -79,24 +79,29 @@ class FaangWatchScraper:
         jobs: list[dict] = []
         seen_ids: set[str] = set()
 
+        from utils.retry import requests_retry
+
+        @requests_retry
+        def _fetch_page(company: str, page: int) -> dict:
+            resp = requests.get(
+                _BASE_URL,
+                headers=headers,
+                params={
+                    "company": company,
+                    "categories": _CATEGORIES_JSON,
+                    "freshness": _FRESHNESS,
+                    "offset": page * _PAGE_SIZE,
+                    "page_size": _PAGE_SIZE,
+                },
+                timeout=_TIMEOUT,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
         for company in _COMPANIES:
             for page in range(_MAX_PAGES):
-                offset = page * _PAGE_SIZE
                 try:
-                    resp = requests.get(
-                        _BASE_URL,
-                        headers=headers,
-                        params={
-                            "company": company,
-                            "categories": _CATEGORIES_JSON,
-                            "freshness": _FRESHNESS,
-                            "offset": offset,
-                            "page_size": _PAGE_SIZE,
-                        },
-                        timeout=_TIMEOUT,
-                    )
-                    resp.raise_for_status()
-                    payload = resp.json()
+                    payload = _fetch_page(company, page)
                     items = (payload.get("batch") if isinstance(payload, dict) else None) or (
                         payload if isinstance(payload, list) else []
                     )

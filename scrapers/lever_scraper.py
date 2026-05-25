@@ -12,6 +12,7 @@ log = structlog.get_logger(__name__)
 
 _BASE_URL = "https://api.lever.co/v0/postings/{slug}"
 _CONCURRENCY = 10
+_BATCH_DELAY = 0.5
 _TIMEOUT = 10
 
 
@@ -21,13 +22,19 @@ class LeverScraper:
 
     async def _fetch_all(self, companies: list[dict[str, str]]) -> list[dict[str, Any]]:
         sem = asyncio.Semaphore(_CONCURRENCY)
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            tasks = [self._fetch_company(client, sem, c) for c in companies]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
         jobs: list[dict[str, Any]] = []
-        for res in results:
-            if isinstance(res, list):
-                jobs.extend(res)
+
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            for i in range(0, len(companies), _CONCURRENCY):
+                batch = companies[i : i + _CONCURRENCY]
+                tasks = [self._fetch_company(client, sem, c) for c in batch]
+                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                for res in batch_results:
+                    if isinstance(res, list):
+                        jobs.extend(res)
+                if i + _CONCURRENCY < len(companies):
+                    await asyncio.sleep(_BATCH_DELAY)
+
         return jobs
 
     async def _fetch_company(

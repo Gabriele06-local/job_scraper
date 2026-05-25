@@ -58,17 +58,22 @@ class YCJobsScraper:
 
         # YC dataset is small enough that we just paginate without filters
         # (avoids over-filtering and 0-result responses).
+        from utils.retry import requests_retry
+
+        @requests_retry
+        def _fetch_page(page: int) -> dict:
+            resp = requests.get(
+                _BASE_URL,
+                headers=headers,
+                params={"limit": _PAGE_SIZE, "offset": page * _PAGE_SIZE},
+                timeout=_TIMEOUT,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
         for page in range(_MAX_PAGES):
-            offset = page * _PAGE_SIZE
             try:
-                resp = requests.get(
-                    _BASE_URL,
-                    headers=headers,
-                    params={"limit": _PAGE_SIZE, "offset": offset},
-                    timeout=_TIMEOUT,
-                )
-                resp.raise_for_status()
-                payload = resp.json()
+                payload = _fetch_page(page)
                 items = (
                     payload
                     if isinstance(payload, list)
