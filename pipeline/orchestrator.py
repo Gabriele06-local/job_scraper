@@ -39,6 +39,7 @@ from models.job import (
     compute_dedup_hash,
     normalize_text,
 )
+from pipeline.company_scorer import CompanyTrustScorer
 from pipeline.dedupe import (
     check_fuzzy_dup,
     find_cross_source_dup,
@@ -123,6 +124,7 @@ class ImportPipeline:
         self._dry_run = dry_run
         self._report_tracker = report_tracker
         self._report_id = report_id
+        self._company_scorer = CompanyTrustScorer()
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -155,6 +157,10 @@ class ImportPipeline:
                 result.errors.append(f"{raw.url}: {exc}")
 
         result.cost_summary = cost_tracker.summary()
+
+        # Persist company trust scores
+        if not self._dry_run and self._company_scorer.company_count > 0:
+            self._company_scorer.persist_all(self._companies_col)
 
         logger.info(
             "pipeline.run_complete",
@@ -319,6 +325,14 @@ class ImportPipeline:
                     title=raw.title[:80],
                     reason=job.reject_reason,
                 )
+
+            # Stage 4.5: Company trust scoring
+            self._company_scorer.record(
+                company_name_normalized=job.company.name_normalized,
+                job=job,
+                passed=job.status == JobStatus.ACTIVE,
+                quality_score=job.quality.quality_score,
+            )
 
         # Stage 5: Company upsert
         if not self._dry_run:
