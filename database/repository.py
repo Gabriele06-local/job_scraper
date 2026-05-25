@@ -73,11 +73,15 @@ def get_providers() -> Collection:  # type: ignore[type-arg]
 # be explicitly enabled via the backoffice / seed script.
 _LEGACY_ENABLED_SLUGS: frozenset[str] = frozenset(
     {
+        "active_jobs_db",
         "adzuna",
         "arbeitnow",
         "ashby",
+        "faang_watch",
         "greenhouse",
         "himalayas",
+        "hn_hiring",
+        "hn_realtime",
         "iprogrammatori",
         "jobicy",
         "jooble",
@@ -88,7 +92,10 @@ _LEGACY_ENABLED_SLUGS: frozenset[str] = frozenset(
         "remoteok",
         "remotive",
         "rss",
+        "startup_jobs",
         "themuse",
+        "workday_jobs",
+        "yc_jobs",
     }
 )
 
