@@ -6,6 +6,7 @@ import time
 
 import requests
 import structlog
+from utils.retry import safe_get
 
 log = structlog.get_logger(__name__)
 
@@ -27,7 +28,7 @@ class RemotiveScraper:
         jobs: list[dict] = []
         for category in _CATEGORIES:
             try:
-                resp = requests.get(
+                resp = safe_get(
                     _BASE_URL,
                     params={"category": category},
                     timeout=_TIMEOUT,

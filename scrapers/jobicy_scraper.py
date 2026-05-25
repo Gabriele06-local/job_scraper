@@ -1,10 +1,10 @@
 import requests
-import logging
+import structlog
+from utils.retry import safe_get
 from typing import List, Dict
 from .base_scraper import BaseScraper
-import time
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class JobicyScraper(BaseScraper):
@@ -40,14 +40,12 @@ class JobicyScraper(BaseScraper):
                 "Referer": "https://jobicy.com/",
             }
 
-            time.sleep(1)
-
-            response = requests.get(self.BASE_URL, params=params, headers=headers, timeout=15)
+            response = safe_get(self.BASE_URL, params=params, headers=headers, timeout=15)
             response.raise_for_status()
             data = response.json()
 
             if not data.get("success"):
-                logger.warning(f"Jobicy API reported failure: {data.get('message')}")
+                logger.warning("jobicy.api_failure", message=data.get("message"))
                 return []
 
             jobs_list = data.get("jobs", [])
@@ -83,6 +81,6 @@ class JobicyScraper(BaseScraper):
                 )
 
         except Exception as e:
-            logger.error(f"Error scraping Jobicy: {e}")
+            logger.error("jobicy.fetch_error", error=str(e))
 
         return all_jobs

@@ -54,3 +54,15 @@ httpx_retry = retry(
     before_sleep=before_sleep_log(log, logging.WARNING),
     reraise=True,
 )
+
+
+@requests_retry
+def safe_get(url: str, **kwargs: object) -> requests.Response:
+    """Wrapper around requests.get with exponential backoff retry."""
+    return requests.get(url, **kwargs)
+
+
+@requests_retry
+def safe_post(url: str, **kwargs: object) -> requests.Response:
+    """Wrapper around requests.post with exponential backoff retry."""
+    return requests.post(url, **kwargs)

@@ -1,10 +1,11 @@
 import requests
-import logging
+import structlog
+from utils.retry import safe_get
 from typing import List, Dict
 from datetime import datetime
 from .base_scraper import BaseScraper
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class RemoteOKScraper(BaseScraper):
@@ -22,7 +23,7 @@ class RemoteOKScraper(BaseScraper):
         # We will fetch recent jobs and filter client-side for the keyword.
 
         try:
-            response = requests.get(self.api_url, timeout=10)
+            response = safe_get(self.api_url, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -65,5 +66,5 @@ class RemoteOKScraper(BaseScraper):
             return jobs
 
         except Exception as e:
-            logger.error(f"Error scraping RemoteOK: {e}")
+            logger.error("remoteok.fetch_error", error=str(e))
             return []

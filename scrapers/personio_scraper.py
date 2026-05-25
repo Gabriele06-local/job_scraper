@@ -12,6 +12,7 @@ from typing import Any
 
 import requests
 import structlog
+from utils.retry import safe_get
 
 log = structlog.get_logger(__name__)
 
@@ -49,7 +50,7 @@ class PersonioScraper:
             slug = company["slug"]
             name = company["name"]
             try:
-                resp = requests.get(_BASE_URL.format(slug=slug), timeout=_TIMEOUT)
+                resp = safe_get(_BASE_URL.format(slug=slug), timeout=_TIMEOUT)
                 resp.raise_for_status()
                 items = self._parse_xml(resp.content, name)
                 log.debug("personio.fetched", company=name, count=len(items))

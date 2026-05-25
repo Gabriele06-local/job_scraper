@@ -6,6 +6,7 @@ import time
 
 import requests
 import structlog
+from utils.retry import safe_get
 
 log = structlog.get_logger(__name__)
 
@@ -45,7 +46,7 @@ class ReedScraper:
             skip = 0
             for _ in range(_MAX_PAGES):
                 try:
-                    resp = requests.get(
+                    resp = safe_get(
                         _BASE_URL,
                         auth=(self._api_key, ""),
                         params={

@@ -1,11 +1,12 @@
 import re
 import requests
-import logging
+import structlog
+from utils.retry import safe_get
 from bs4 import BeautifulSoup
 from typing import List, Dict
 from .base_scraper import BaseScraper
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _extract_company(item: BeautifulSoup, title: str) -> str:
@@ -57,7 +58,7 @@ class RSSScraper(BaseScraper):
         for url in urls:
             try:
                 current_url = url.format(keyword=keyword) if "{keyword}" in url else url
-                response = requests.get(current_url, headers=headers, timeout=10)
+                response = safe_get(current_url, headers=headers, timeout=10)
                 soup = BeautifulSoup(response.content, "xml")
                 items = soup.find_all("item")
 
@@ -84,6 +85,6 @@ class RSSScraper(BaseScraper):
                         }
                     )
             except Exception as e:
-                logger.error(f"Error scraping RSS {url}: {e}")
+                logger.error("rss.fetch_error", url=url, error=str(e))
 
         return all_jobs

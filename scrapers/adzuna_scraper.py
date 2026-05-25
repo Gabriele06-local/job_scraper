@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import requests
-import logging
+import structlog
+from utils.retry import safe_get
 from typing import List, Dict
 from .base_scraper import BaseScraper
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class AdzunaScraper(BaseScraper):
@@ -43,11 +44,11 @@ class AdzunaScraper(BaseScraper):
             params["category"] = category
 
         if not self.app_id or not self.app_key:
-            logger.warning("Adzuna credentials missing, skipping.")
+            logger.warning("adzuna.credentials_missing")
             return []
 
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = safe_get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -70,5 +71,5 @@ class AdzunaScraper(BaseScraper):
                 )
             return jobs
         except Exception as e:
-            logger.error(f"Error scraping Adzuna: {e}")
+            logger.error("adzuna.fetch_error", error=str(e))
             return []
