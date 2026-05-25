@@ -184,10 +184,10 @@ def merge_cross_source(  # type: ignore[type-arg]
     return existing
 
 
-def check_fuzzy_dup(raw_job: RawJob, jobs_col: Collection) -> Optional[str]:  # type: ignore[type-arg]
-    """Check for fuzzy title duplicate from a different source (SPEC 04 §2.3).
+def check_fuzzy_dup(raw_job: RawJob, jobs_col: Collection) -> Optional[Job]:  # type: ignore[type-arg]
+    """Find fuzzy title duplicate from a different source (SPEC 04 §2.3).
 
-    Returns the _id string of the matching doc, or None.
+    Returns the full Job of the matching doc, or None.
     Uses rapidfuzz token_sort_ratio >= 92 within 14-day window, same company.
     """
     window_start = datetime.now(tz=timezone.utc) - timedelta(days=_FUZZY_WINDOW_DAYS)
@@ -200,7 +200,6 @@ def check_fuzzy_dup(raw_job: RawJob, jobs_col: Collection) -> Optional[str]:  # 
             "posted_at": {"$gte": window_start},
             "source": {"$ne": raw_job.source},
         },
-        {"_id": 1, "title_normalized": 1},
     )
 
     for doc in candidates:
@@ -214,6 +213,6 @@ def check_fuzzy_dup(raw_job: RawJob, jobs_col: Collection) -> Optional[str]:  # 
                 matched_id=str(doc["_id"]),
                 score=score,
             )
-            return str(doc["_id"])
+            return Job.from_mongo_doc(doc)
 
     return None

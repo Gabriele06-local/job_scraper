@@ -244,10 +244,19 @@ class ImportPipeline:
                 merge_cross_source(cross_existing, raw, self._jobs_col)
             return
 
-        # Stage 2b: Fuzzy dedupe (flag only)
-        if check_fuzzy_dup(raw, self._jobs_col):
+        # Stage 2b: Fuzzy dedupe (merge)
+        fuzzy_existing = check_fuzzy_dup(raw, self._jobs_col)
+        if fuzzy_existing is not None:
             c.fuzzy_dup_flagged += 1
-            logger.debug("job.fuzzy_dup_flagged", title=raw.title[:80])
+            logger.info(
+                "job.fuzzy_dedup_merged",
+                title=raw.title[:80],
+                existing_source=fuzzy_existing.source_info.source,
+                new_source=raw.source,
+            )
+            if not self._dry_run:
+                merge_cross_source(fuzzy_existing, raw, self._jobs_col)
+            return
 
         # Stage 3: AI classification (with per-job timing)
         job = self._raw_to_job(raw, dedup_hash)
