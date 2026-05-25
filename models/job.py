@@ -244,6 +244,7 @@ class Job(BaseModel):
     # Identity
     url: str
     dedup_hash: str
+    cross_source_hash: str = ""
 
     # Sub-models
     source_info: JobSource
@@ -294,6 +295,7 @@ class Job(BaseModel):
             "source": self.source_info.source,
             "external_id": self.source_info.external_id,
             "dedup_hash": self.dedup_hash,
+            "cross_source_hash": self.cross_source_hash,
             # Prisma FK — written as ObjectId so Prisma @db.ObjectId reads it correctly
             "company_id": ObjectId(self.company.id) if self.company.id else None,
             # Content
@@ -424,6 +426,7 @@ class Job(BaseModel):
             id=str(doc["_id"]) if "_id" in doc else None,
             url=doc.get("url") or doc.get("link", ""),
             dedup_hash=doc.get("dedup_hash", ""),
+            cross_source_hash=doc.get("cross_source_hash", ""),
             source_info=JobSource(
                 source=doc.get("source", ""),
                 external_id=doc.get("external_id"),
@@ -539,6 +542,12 @@ def normalize_text(text: str) -> str:
 def compute_dedup_hash(title: str, company_name: str, source: str) -> str:
     """sha1(title_normalized|company_normalized|source_lower) per SPEC 01 §3."""
     normalized = f"{normalize_text(title)}|{normalize_text(company_name)}|{source.lower()}"
+    return hashlib.sha1(normalized.encode()).hexdigest()  # noqa: S324
+
+
+def compute_cross_source_hash(title: str, company_name: str) -> str:
+    """sha1(title_normalized|company_normalized) — stable across sources."""
+    normalized = f"{normalize_text(title)}|{normalize_text(company_name)}"
     return hashlib.sha1(normalized.encode()).hexdigest()  # noqa: S324
 
 

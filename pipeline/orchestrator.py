@@ -35,10 +35,17 @@ from models.job import (
     JobStatus,
     QualityTier,
     RawJob,
+    compute_cross_source_hash,
     compute_dedup_hash,
     normalize_text,
 )
-from pipeline.dedupe import check_fuzzy_dup, find_existing_job, merge_with_existing
+from pipeline.dedupe import (
+    check_fuzzy_dup,
+    find_cross_source_dup,
+    find_existing_job,
+    merge_cross_source,
+    merge_with_existing,
+)
 from pipeline.language_detector import detect_language
 from pipeline.prefilter import should_send_to_ai
 from pipeline.quality_gate import QualityRejectReason, evaluate
@@ -56,6 +63,7 @@ class PipelineCounters:
     prefilter_rejected: int = 0
     url_invalid: int = 0
     dedupe_hit: int = 0
+    cross_source_hit: int = 0
     fuzzy_dup_flagged: int = 0
     ai_classified: int = 0
     ai_unavailable: int = 0
@@ -219,6 +227,23 @@ class ImportPipeline:
                 merge_with_existing(existing, raw, self._jobs_col)
             return
 
+        # Stage 2a: Cross-source dedup
+        cross_source_hash = compute_cross_source_hash(raw.title, raw.company_name)
+        cross_existing = find_cross_source_dup(cross_source_hash, raw.source, self._jobs_col)
+        if cross_existing is not None:
+            c.cross_source_hit += 1
+            logger.info(
+                "job.cross_source_hit",
+                title=raw.title[:80],
+                existing_url=cross_existing.url,
+                new_url=raw.url,
+                existing_source=cross_existing.source_info.source,
+                new_source=raw.source,
+            )
+            if not self._dry_run:
+                merge_cross_source(cross_existing, raw, self._jobs_col)
+            return
+
         # Stage 2b: Fuzzy dedupe (flag only)
         if check_fuzzy_dup(raw, self._jobs_col):
             c.fuzzy_dup_flagged += 1
@@ -333,6 +358,7 @@ class ImportPipeline:
         return Job(
             url=raw.url,
             dedup_hash=dedup_hash,
+            cross_source_hash=compute_cross_source_hash(raw.title, raw.company_name),
             source_info=JobSource(source=raw.source, external_id=raw.external_id),
             content=JobContent(
                 title=raw.title,

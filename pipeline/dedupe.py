@@ -2,9 +2,10 @@
 
 Layer 1: URL exact match (DB unique index → DuplicateKeyError on insert).
 Layer 2: dedup_hash exact match (DB unique index → DuplicateKeyError on insert).
+Layer 2b: cross_source_hash match across different sources.
 Layer 3: Fuzzy title match across sources, 14-day window.
 
-This module handles L2/L3 app-level checks. L1 is handled by MongoDB on insert.
+This module handles L2/L2b/L3 app-level checks. L1 is handled by MongoDB on insert.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ import structlog
 from pymongo.collection import Collection
 from rapidfuzz import fuzz
 
-from models.job import Job, RawJob, compute_dedup_hash
+from models.job import Job, RawJob, compute_cross_source_hash, compute_dedup_hash
 
 if TYPE_CHECKING:
     pass
@@ -29,8 +30,11 @@ _FUZZY_WINDOW_DAYS = 14
 # Re-export so callers can import from one place.
 __all__ = [
     "compute_dedup_hash",
+    "compute_cross_source_hash",
     "find_existing_job",
+    "find_cross_source_dup",
     "merge_with_existing",
+    "merge_cross_source",
     "check_fuzzy_dup",
 ]
 
@@ -83,6 +87,98 @@ def merge_with_existing(existing: Job, new_raw: RawJob, jobs_col: Collection) ->
     existing.last_seen_at = now
     existing.updated_at = now
     if new_raw.posted_at and _utc(new_raw.posted_at) < _utc(existing.posted_at):
+        existing.posted_at = new_raw.posted_at
+
+    return existing
+
+
+def find_cross_source_dup(  # type: ignore[type-arg]
+    cross_hash: str,
+    source: str,
+    jobs_col: Collection,
+) -> Optional[Job]:
+    """Find existing job from a different source with the same cross_source_hash.
+
+    Returns the existing Job or None. Uses the hash computed from
+    title+company (without source) to catch the same offer on different boards.
+    """
+    doc = jobs_col.find_one(
+        {
+            "cross_source_hash": cross_hash,
+            "source": {"$ne": source},
+        },
+    )
+    if doc is None:
+        return None
+    return Job.from_mongo_doc(doc)
+
+
+def merge_cross_source(  # type: ignore[type-arg]
+    existing: Job,
+    new_raw: RawJob,
+    jobs_col: Collection,
+) -> Job:
+    """Merge cross-source duplicate, enriching the existing job.
+
+    Keeps: longer description, wider salary range, earliest posted_at.
+    Does NOT overwrite AI fields, status, or reject_reason.
+    """
+    now = datetime.now(tz=timezone.utc)
+    set_fields: dict = {"last_seen_at": now, "updated_at": now}
+
+    # Keep longer description
+    if len(new_raw.description) > len(existing.content.description):
+        set_fields["description"] = new_raw.description
+
+    # Widen salary range
+    if new_raw.salary_min is not None and (
+        existing.salary.min is None or new_raw.salary_min < existing.salary.min
+    ):
+        set_fields["salary_min"] = new_raw.salary_min
+    if new_raw.salary_max is not None and (
+        existing.salary.max is None or new_raw.salary_max > existing.salary.max
+    ):
+        set_fields["salary_max"] = new_raw.salary_max
+
+    # Keep earliest posted_at
+    def _utc(dt: datetime) -> datetime:
+        return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+    if (
+        new_raw.posted_at
+        and existing.posted_at
+        and _utc(new_raw.posted_at) < _utc(existing.posted_at)
+    ):
+        set_fields["posted_at"] = new_raw.posted_at
+        set_fields["published_at"] = new_raw.posted_at
+
+    update: dict = {"$set": set_fields, "$inc": {"seen_count": 1}}
+    jobs_col.update_one({"dedup_hash": existing.dedup_hash}, update)
+
+    logger.info(
+        "dedupe.cross_source_hit",
+        existing_url=existing.url,
+        new_url=new_raw.url,
+        source=new_raw.source,
+    )
+
+    existing.last_seen_at = now
+    existing.updated_at = now
+    if len(new_raw.description) > len(existing.content.description):
+        existing.content.description = new_raw.description
+    if new_raw.salary_min is not None and (
+        existing.salary.min is None or new_raw.salary_min < existing.salary.min
+    ):
+        existing.salary.min = new_raw.salary_min
+    if new_raw.salary_max is not None and (
+        existing.salary.max is None or new_raw.salary_max > existing.salary.max
+    ):
+        existing.salary.max = new_raw.salary_max
+    if (
+        new_raw.posted_at
+        and existing.posted_at
+        and _utc(new_raw.posted_at) < _utc(existing.posted_at)
+    ):
         existing.posted_at = new_raw.posted_at
 
     return existing

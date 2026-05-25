@@ -169,6 +169,11 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
             name="language_status_posted_at",
         ),
         IndexModel([("source", ASCENDING)], name="source"),
+        IndexModel(
+            [("cross_source_hash", ASCENDING)],
+            sparse=True,
+            name="cross_source_hash",
+        ),
         IndexModel([("expires_at", ASCENDING)], sparse=True, name="expires_at_sparse"),
         IndexModel([("last_probed_at", ASCENDING)], sparse=True, name="last_probed_at_sparse"),
         IndexModel([("location.geo", "2dsphere")], name="location_geo_2dsphere"),
