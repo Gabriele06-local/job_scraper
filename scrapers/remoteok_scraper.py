@@ -52,14 +52,14 @@ class RemoteOKScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": title,
-                        "company": {"name": item.get("company"), "logo": item.get("company_logo")},
+                        "company_name": item.get("company"),
                         "description": self.clean_description(description),
-                        "link": item.get("url") or item.get("apply_url"),
+                        "url": item.get("url") or item.get("apply_url"),
                         "location_raw": item.get("location"),
                         "source": "RemoteOK",
                         "original_language": "en",
                         "published_at": pub_date.split("T")[0] if pub_date else None,
-                        "remote": True,  # It's RemoteOK
+                        "remote": True,
                     }
                 )
 

@@ -74,15 +74,12 @@ class ArbeitnowScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": title,
-                        "company": {
-                            "name": item.get("company_name"),
-                            "logo": None,
-                        },  # Logo URL is not always direct
+                        "company_name": item.get("company_name"),
                         "description": self.clean_description(description),
-                        "link": item.get("url"),
+                        "url": item.get("url"),
                         "location_raw": item.get("location"),
                         "source": "Arbeitnow",
-                        "original_language": "en",  # Mostly English/German
+                        "original_language": "en",
                         "published_at": pub_date,
                         "remote": item.get("remote", False),
                     }

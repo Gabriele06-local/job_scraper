@@ -57,9 +57,9 @@ class AdzunaScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": item.get("title"),
-                        "company": {"name": item.get("company", {}).get("display_name")},
+                        "company_name": item.get("company", {}).get("display_name"),
                         "description": self.clean_description(item.get("description")),
-                        "link": item.get("redirect_url"),
+                        "url": item.get("redirect_url"),
                         "location_raw": item.get("location", {}).get("display_name"),
                         "source": "Adzuna",
                         "original_language": lang,

@@ -63,20 +63,17 @@ class JobicyScraper(BaseScraper):
                 all_jobs.append(
                     {
                         "title": title,
-                        "company": {
-                            "name": item.get("companyName", "Unknown"),
-                            "logo_url": item.get("companyLogo"),
-                        },
+                        "company_name": item.get("companyName", "Unknown"),
                         "description": self.clean_description(item.get("jobDescription", "")),
-                        "link": item.get("url", ""),
+                        "url": item.get("url", ""),
                         "source": "Jobicy",
                         "original_language": lang,
-                        "published_at": item.get("pubDate"),  # Usually YYYY-MM-DD HH:MM:SS
+                        "published_at": item.get("pubDate"),
                         "location_raw": item.get("jobGeo"),
-                        "employment_type": item.get("jobType"),  # e.g. full-time
+                        "employment_type": item.get("jobType"),
                         "salary_min": item.get("annualSalaryMin"),
                         "salary_max": item.get("annualSalaryMax"),
-                        "remote": True,  # Jobicy is remote-first
+                        "remote": True,
                     }
                 )
 

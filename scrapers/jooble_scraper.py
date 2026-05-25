@@ -82,9 +82,9 @@ class JoobleScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": item.get("title"),
-                        "company": {"name": item.get("company") or "Unknown"},
+                        "company_name": item.get("company") or "Unknown",
                         "description": self.clean_description(item.get("snippet")),
-                        "link": link,
+                        "url": link,
                         "location_raw": item.get("location"),
                         "source": f"Jooble ({item.get('source', 'Unknown')})",
                         "original_language": lang,

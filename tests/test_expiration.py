@@ -389,7 +389,7 @@ class TestCLICommands:
             "url": "https://jobs.example.com/123",
             "title": "Senior Python Dev",
             "description": "We need a Python developer with 5 years of experience.",
-            "company": {"name": "Acme Corp"},
+            "company_name": "Acme Corp",
             "source": "adzuna",
             "published_at": "2026-05-01",
         }
@@ -398,11 +398,11 @@ class TestCLICommands:
         assert raw.url == "https://jobs.example.com/123"
         assert raw.company_name == "Acme Corp"
 
-    def test_dict_to_raw_job_link_fallback(self):
+    def test_dict_to_raw_job_with_canonical_keys(self):
         from import_service.cli import _dict_to_raw_job
 
         d = {
-            "link": "https://jobs.example.com/456",
+            "url": "https://jobs.example.com/456",
             "title": "Dev",
             "description": "Desc",
             "company_name": "Corp",

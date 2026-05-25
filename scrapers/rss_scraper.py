@@ -72,11 +72,11 @@ class RSSScraper(BaseScraper):
                     all_jobs.append(
                         {
                             "title": title,
-                            "company": {"name": company_name},
+                            "company_name": company_name,
                             "description": self.clean_description(
                                 item.find("description").text if item.find("description") else ""
                             ),
-                            "link": item.find("link").text if item.find("link") else "",
+                            "url": item.find("link").text if item.find("link") else "",
                             "source": "RSS Feed",
                             "original_language": lang,
                             "published_at": (

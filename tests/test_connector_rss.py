@@ -52,7 +52,7 @@ def test_rss_extracts_company_from_dc_creator() -> None:
         )
         jobs = list(c.fetch())
     assert len(jobs) >= 1
-    assert jobs[0]["company"]["name"] == "Acme Corp"
+    assert jobs[0]["company_name"] == "Acme Corp"
 
 
 def test_rss_extracts_company_from_author_tag() -> None:
@@ -72,7 +72,7 @@ def test_rss_extracts_company_from_author_tag() -> None:
         )
         jobs = list(c.fetch())
     assert len(jobs) >= 1
-    assert jobs[0]["company"]["name"] == "TechCo Inc"
+    assert jobs[0]["company_name"] == "TechCo Inc"
 
 
 def test_rss_falls_back_to_title_prefix() -> None:
@@ -91,7 +91,7 @@ def test_rss_falls_back_to_title_prefix() -> None:
         )
         jobs = list(c.fetch())
     assert len(jobs) >= 1
-    assert jobs[0]["company"]["name"] == "Acme Corp"
+    assert jobs[0]["company_name"] == "Acme Corp"
 
 
 def test_rss_unknown_company_when_no_metadata() -> None:
@@ -110,7 +110,7 @@ def test_rss_unknown_company_when_no_metadata() -> None:
         )
         jobs = list(c.fetch())
     assert len(jobs) >= 1
-    assert jobs[0]["company"]["name"] == "Unknown"
+    assert jobs[0]["company_name"] == "Unknown"
 
 
 def test_rss_no_crash_on_text_parse_error() -> None:

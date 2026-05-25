@@ -52,7 +52,7 @@ def test_jooble_yields_dicts() -> None:
     assert len(jobs) >= 1
     j = jobs[0]
     assert j["title"] == "Python Developer"
-    assert j["company"]["name"] == "TechCorp"
+    assert j["company_name"] == "TechCorp"
 
 
 def test_jooble_skips_closed_jobs() -> None:

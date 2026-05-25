@@ -57,19 +57,16 @@ class IProgrammatoriScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": title,
-                        "company": {
-                            "name": (
-                                item.find("company").text if item.find("company") else "Unknown"
-                            ),
-                            "logo": None,
-                        },
+                        "company_name": (
+                            item.find("company").text if item.find("company") else "Unknown"
+                        ),
                         "description": self.clean_description(description),
-                        "link": link,
+                        "url": link,
                         "location_raw": (item.find("city").text if item.find("city") else ""),
                         "source": "IProgrammatori",
                         "original_language": "it",
                         "published_at": pub_date,
-                        "remote": False,  # Feed doesn't explicitly state remote usually, AI will refine
+                        "remote": False,
                     }
                 )
 
