@@ -84,6 +84,7 @@ def _job(classification: JobClassification | None = None, **overrides) -> Job:
 
 class TestComputeQualityScore:
     def test_perfect_score(self):
+        long_desc = "x " * 2000  # >3000 chars
         cl = _cls(
             technical_skills=["A", "B", "C", "D", "E"],
             seniority=Seniority.SENIOR,
@@ -91,8 +92,17 @@ class TestComputeQualityScore:
             salary_max=120000,
             remote_mode=RemoteMode.REMOTE,
             ai_confidence=1.0,
+            quality_flags=["clear_jd", "has_requirements", "has_benefits", "has_tech_stack"],
+            requirements=["req1", "req2"],
+            benefits=["ben1"],
         )
-        assert compute_quality_score(cl) == 100
+        job = _job(classification=cl, content=JobContent(
+            title="Senior Python Developer",
+            title_normalized="senior python developer",
+            description=long_desc,
+            language=Language.EN,
+        ))
+        assert compute_quality_score(job) == 100
 
     def test_zero_score(self):
         cl = _cls(
@@ -102,11 +112,20 @@ class TestComputeQualityScore:
             salary_max=None,
             remote_mode=RemoteMode.UNKNOWN,
             ai_confidence=0.0,
+            quality_flags=[],
+            requirements=[],
+            benefits=[],
         )
-        assert compute_quality_score(cl) == 0
+        job = _job(classification=cl, content=JobContent(
+            title="X",
+            title_normalized="x",
+            description="short",
+            language=Language.EN,
+        ))
+        assert compute_quality_score(job) == 0
 
     def test_returns_int(self):
-        assert isinstance(compute_quality_score(_cls()), int)
+        assert isinstance(compute_quality_score(_job()), int)
 
 
 # ---------------------------------------------------------------------------

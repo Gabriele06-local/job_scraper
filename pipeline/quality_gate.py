@@ -153,16 +153,71 @@ def _is_description_meaningful(text: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def compute_quality_score(classification: JobClassification) -> int:
-    """Compute 0-100 quality score.
+def _description_score(description: str) -> float:
+    """Score 0-1 based on description length (proxy for completeness).
 
-    Weights: skills 30%, seniority 20%, salary 20%, remote 15%, confidence 15%.
+    Tiers: <200=0.0, 200-999=0.4, 1000-2999=0.7, 3000+=1.0
     """
-    skills_score = min(1.0, len(classification.technical_skills) / 5.0)
-    seniority_score = 0.0 if classification.seniority == Seniority.UNKNOWN else 1.0
+    length = len(description or "")
+    if length >= 3000:
+        return 1.0
+    if length >= 1000:
+        return 0.7
+    if length >= 200:
+        return 0.4
+    return 0.0
 
-    has_min = classification.salary_min is not None
-    has_max = classification.salary_max is not None
+
+def _quality_flags_score(flags: list[str]) -> float:
+    """Score 0-1 based on AI quality flags.
+
+    Positive flags add to score, negative flags penalise.
+    """
+    s = 0.0
+    flag_set = set(flags)
+    if "clear_jd" in flag_set:
+        s += 0.30
+    if "has_requirements" in flag_set:
+        s += 0.25
+    if "has_benefits" in flag_set:
+        s += 0.25
+    if "has_tech_stack" in flag_set:
+        s += 0.20
+    if "vague" in flag_set:
+        s -= 0.30
+    if "boilerplate" in flag_set:
+        s -= 0.30
+    return max(0.0, min(1.0, s))
+
+
+def _requirements_score(requirements: list[str], benefits: list[str]) -> float:
+    """Score 0-1 based on presence of requirements and benefits lists.
+
+    Items from both lists are counted.
+    """
+    total = len(requirements) + len(benefits)
+    if total >= 3:
+        return 1.0
+    if total >= 2:
+        return 0.7
+    if total >= 1:
+        return 0.4
+    return 0.0
+
+
+def compute_quality_score(job: Job) -> int:
+    """Compute 0-100 quality score from the full Job object.
+
+    Weights (100%):
+      skills 25%, seniority 15%, salary 15%, remote 10%, confidence 10%,
+      description 10%, quality_flags 10%, requirements 5%.
+    """
+    cl = job.classification
+    skills_score = min(1.0, len(cl.technical_skills) / 5.0)
+    seniority_score = 0.0 if cl.seniority == Seniority.UNKNOWN else 1.0
+
+    has_min = cl.salary_min is not None
+    has_max = cl.salary_max is not None
     if has_min and has_max:
         salary_score = 1.0
     elif has_min or has_max:
@@ -170,15 +225,21 @@ def compute_quality_score(classification: JobClassification) -> int:
     else:
         salary_score = 0.0
 
-    remote_score = _REMOTE_SCORE.get(classification.remote_mode, 0.0)
-    confidence_score = max(0.0, min(1.0, classification.ai_confidence))
+    remote_score = _REMOTE_SCORE.get(cl.remote_mode, 0.0)
+    confidence_score = max(0.0, min(1.0, cl.ai_confidence))
+    desc_score = _description_score(job.content.description)
+    flags_score = _quality_flags_score(cl.quality_flags)
+    req_score = _requirements_score(cl.requirements, cl.benefits)
 
     raw = (
-        0.30 * skills_score
-        + 0.20 * seniority_score
-        + 0.20 * salary_score
-        + 0.15 * remote_score
-        + 0.15 * confidence_score
+        0.25 * skills_score
+        + 0.15 * seniority_score
+        + 0.15 * salary_score
+        + 0.10 * remote_score
+        + 0.10 * confidence_score
+        + 0.10 * desc_score
+        + 0.10 * flags_score
+        + 0.05 * req_score
     )
     return round(raw * 100)
 
@@ -260,7 +321,7 @@ def evaluate(job: Job) -> Job:
     """
     cl = job.classification
 
-    score = compute_quality_score(cl)
+    score = compute_quality_score(job)
     geocode_pending = bool(job.location and job.location.raw and not job.location.geo)
     job.quality = JobQuality(quality_score=score, geocode_pending=geocode_pending)
 
