@@ -183,7 +183,15 @@ _SYSTEM_PROMPT = (
     "a JSON object that conforms to the provided schema. No prose, no markdown, no "
     'explanations. If a field is unknown, use the schema\'s "unknown" enum value or '
     "null per the schema. Do not invent skills or salary numbers. Confidence is your "
-    "self-assessment of overall extraction reliability (0..1)."
+    "self-assessment of overall extraction reliability (0..1).\n\n"
+    "Seniority rules — use the TITLE as the primary signal, then the description:\n"
+    '- "senior" only when the title explicitly contains "Senior"/"Sr." or '
+    "the description requires 5+ years of experience\n"
+    '- "junior" when the title contains "Junior"/"Jr."/"Entry"/"Trainee" '
+    'or the posting says "no experience required"\n'
+    '- "mid" for roles with 1-4 years of experience and NO seniority keyword in the title\n'
+    '- "unknown" when no experience level or seniority keyword is mentioned at all;\n'
+    '  do NOT invent a seniority level — "unknown" is correct when the posting is silent'
 )
 
 _SCHEMA_STR = json.dumps(_CLASSIFICATION_SCHEMA, separators=(",", ":"))

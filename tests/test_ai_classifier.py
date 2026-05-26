@@ -283,3 +283,20 @@ class TestClassifyGroundTruth:
         """Fixtures marked rejected_prefilter have null ai_output — no classify call needed."""
         for f in ground_truth_reject_prefilter:
             assert f["expected_output"].get("ai_output") is None
+
+
+# ---------------------------------------------------------------------------
+# Static prompt assertions
+# ---------------------------------------------------------------------------
+
+
+class TestSystemPrompt:
+    """Static checks on _SYSTEM_PROMPT to prevent accidental drift."""
+
+    def test_contains_seniority_rules(self):
+        from ai.classifier import _SYSTEM_PROMPT
+
+        assert "Seniority rules" in _SYSTEM_PROMPT
+        assert '"senior" only when the title' in _SYSTEM_PROMPT
+        assert '"junior" when the title' in _SYSTEM_PROMPT
+        assert '"unknown" when no experience' in _SYSTEM_PROMPT
