@@ -199,6 +199,8 @@ class JobClassification(BaseModel):
     requirements: list[str] = Field(default_factory=list)
     benefits: list[str] = Field(default_factory=list)
     quality_flags: list[str] = Field(default_factory=list)
+    # CV Drop — AI-assessed likelihood a qualified candidate would apply (0..1)
+    cv_drop_score: float = 0.0
     # Salary extracted by AI (copied to Job.salary by the pipeline stage)
     salary_min: int | None = None
     salary_max: int | None = None
@@ -350,6 +352,7 @@ class Job(BaseModel):
             "requirements": cl.requirements,
             "benefits": cl.benefits,
             "quality_flags": cl.quality_flags,
+            "cv_drop_score": cl.cv_drop_score,
             "ai_confidence": cl.ai_confidence,
             "ai_model": cl.ai_model,
             "ai_call_at": cl.ai_call_at,
@@ -471,6 +474,7 @@ class Job(BaseModel):
                 requirements=doc.get("requirements", []),
                 benefits=doc.get("benefits", []),
                 quality_flags=doc.get("quality_flags", []),
+                cv_drop_score=doc.get("cv_drop_score", 0.0),
                 ai_confidence=doc.get("ai_confidence", 0.0),
                 ai_model=doc.get("ai_model", ""),
                 ai_call_at=doc.get("ai_call_at"),

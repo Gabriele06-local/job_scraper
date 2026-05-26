@@ -175,6 +175,16 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
             },
         },
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "cv_drop_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": (
+                "How likely a qualified candidate submits their CV here "
+                "(0=poor, 1=compelling). Based on clarity, salary, benefits, "
+                "tech stack appeal, and posting completeness."
+            ),
+        },
     },
 }
 
@@ -192,7 +202,10 @@ _SYSTEM_PROMPT = (
     'or the posting says "no experience required"\n'
     '- "mid" for roles with 1-4 years of experience and NO seniority keyword in the title\n'
     '- "unknown" when no experience level or seniority keyword is mentioned at all;\n'
-    '  do NOT invent a seniority level — "unknown" is correct when the posting is silent'
+    '  do NOT invent a seniority level — "unknown" is correct when the posting is silent\n\n'
+    "cv_drop_score (0..1): rate how likely a qualified candidate would submit their CV.\n"
+    "High scores need clear salary, benefits, tech stack, and a well-written description.\n"
+    "Low scores: vague/boilerplate text, no salary or benefits, poor formatting."
 )
 
 _SCHEMA_STR = json.dumps(_CLASSIFICATION_SCHEMA, separators=(",", ":"))
@@ -253,6 +266,7 @@ class _GroqOutput(BaseModel):
     currency: str | None = None
     languages_required: list[str] = []
     quality_flags: list[str] = []
+    cv_drop_score: float = 0.0
     confidence: float = 0.0
 
     @field_validator("category", mode="before")
@@ -537,6 +551,7 @@ class GroqClassifier:
             currency=parsed.currency,
             languages_required=parsed.languages_required,
             quality_flags=parsed.quality_flags,
+            cv_drop_score=parsed.cv_drop_score,
             ai_confidence=parsed.confidence,
             ai_model=settings.groq_model,
             ai_call_at=datetime.now(tz=timezone.utc),

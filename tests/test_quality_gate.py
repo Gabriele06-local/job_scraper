@@ -92,6 +92,7 @@ class TestComputeQualityScore:
             salary_max=120000,
             remote_mode=RemoteMode.REMOTE,
             ai_confidence=1.0,
+            cv_drop_score=1.0,
             quality_flags=["clear_jd", "has_requirements", "has_benefits", "has_tech_stack"],
             requirements=["req1", "req2"],
             benefits=["ben1"],

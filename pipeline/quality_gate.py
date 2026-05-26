@@ -209,8 +209,8 @@ def compute_quality_score(job: Job) -> int:
     """Compute 0-100 quality score from the full Job object.
 
     Weights (100%):
-      skills 25%, seniority 15%, salary 15%, remote 10%, confidence 10%,
-      description 10%, quality_flags 10%, requirements 5%.
+      skills 20%, seniority 10%, salary 15%, remote 10%, confidence 10%,
+      description 10%, quality_flags 10%, requirements 5%, cv_drop 10%.
     """
     cl = job.classification
     skills_score = min(1.0, len(cl.technical_skills) / 5.0)
@@ -230,16 +230,18 @@ def compute_quality_score(job: Job) -> int:
     desc_score = _description_score(job.content.description)
     flags_score = _quality_flags_score(cl.quality_flags)
     req_score = _requirements_score(cl.requirements, cl.benefits)
+    cv_drop_score = max(0.0, min(1.0, cl.cv_drop_score))
 
     raw = (
-        0.25 * skills_score
-        + 0.15 * seniority_score
+        0.20 * skills_score
+        + 0.10 * seniority_score
         + 0.15 * salary_score
         + 0.10 * remote_score
         + 0.10 * confidence_score
         + 0.10 * desc_score
         + 0.10 * flags_score
         + 0.05 * req_score
+        + 0.10 * cv_drop_score
     )
     return round(raw * 100)
 
