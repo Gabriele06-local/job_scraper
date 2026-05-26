@@ -183,8 +183,8 @@ class JobClassification(BaseModel):
     Includes salary because the AI classifier extracts salary along with
     the rest. JobSalary on Job is populated from these fields by the caller.
 
-    technical_skills vs skills split is done by the skills lexicon (claude-06).
-    Until then classify_job() puts all Groq skills into technical_skills.
+    technical_skills vs skills split is done by utils/skills_lexicon (D-03-04).
+    The classifier calls split_skills() on the raw Groq skills output.
     """
 
     technical_skills: list[str] = Field(default_factory=list)

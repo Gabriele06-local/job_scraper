@@ -156,9 +156,15 @@ class TestPassesQualityGate:
         assert not ok
         assert reasons == [QualityRejectReason.ZERO_SKILLS.value]
 
-    def test_one_skill_passes_minimum_for_sdd_strict(self):
-        """SDD strict ZERO_SKILLS only fires at 0 — tier logic enforces ≥2/≥4."""
+    def test_one_skill_now_rejects_after_lexicon_split(self):
+        """Post-lexicon-split (D-03-04): ZERO_SKILLS fires at <2 (was <1)."""
         cl = _cls(technical_skills=["Python"])
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
+        assert not ok
+        assert reasons == [QualityRejectReason.ZERO_SKILLS.value]
+
+    def test_two_skills_passes_minimum(self):
+        cl = _cls(technical_skills=["Python", "Django"])
         ok, _ = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert ok is True
 

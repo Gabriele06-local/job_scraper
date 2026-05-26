@@ -1,7 +1,7 @@
 """Quality gate stage — SDD strict (§A.5).
 
 Replaces the legacy SPEC 03 cascade with a SDD strict gate enforcing:
-    MISSING_COMPANY → ZERO_SKILLS → DESCRIPTION_INVALID
+    MISSING_COMPANY → ZERO_SKILLS (>=2 post-lexicon-split) → DESCRIPTION_INVALID
     → UNKNOWN_SENIORITY_AFTER_RETRY → UNKNOWN_EMPLOYMENT_TYPE_AFTER_RETRY
     → UNKNOWN_REMOTE_MODE_AFTER_RETRY → LOW_CONFIDENCE
 
@@ -37,7 +37,7 @@ from models.job import (
 
 logger = structlog.get_logger(__name__)
 
-_MIN_VALID_SKILLS = 1  # SDD §A.5 — ZERO_SKILLS rejects only at 0
+_MIN_VALID_SKILLS = 2  # SDD §A.5 — ZERO_SKILLS; was 1 during lexicon deferral (D-03-04)
 _MIN_PREMIUM_SKILLS = 4
 _DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 _PREMIUM_CONFIDENCE_THRESHOLD = 0.85
@@ -266,7 +266,7 @@ def passes_quality_gate(
     if _is_company_missing(company_name):
         return False, [QualityRejectReason.MISSING_COMPANY.value]
 
-    # 2. Zero skills hard-fail (>=1 required; ≥2/≥4 tier-aware downstream)
+    # 2. Zero skills hard-fail (>=2 post-lexicon-split; premium needs >=4 downstream)
     if len(classification.technical_skills) < _MIN_VALID_SKILLS:
         return False, [QualityRejectReason.ZERO_SKILLS.value]
 

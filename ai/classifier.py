@@ -65,6 +65,7 @@ from models.job import (
     RoleFamily,
     Seniority,
 )
+from utils.skills_lexicon import split_skills
 
 logger = structlog.get_logger(__name__)
 
@@ -522,10 +523,10 @@ class GroqClassifier:
             logger.warning("groq.validation_error", error=str(e))
             raise
 
-        # skills lexicon split deferred to claude-06; all Groq skills → technical_skills
+        tech, non_tech = split_skills(parsed.skills)
         return JobClassification(
-            technical_skills=parsed.skills,
-            skills=[],
+            technical_skills=tech,
+            skills=non_tech,
             category=parsed.category,
             role_family=parsed.role_family,
             seniority=parsed.seniority,
