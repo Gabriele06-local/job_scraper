@@ -6,6 +6,7 @@ Fails loudly on index errors (fixes P1-01: silent index swallow).
 from __future__ import annotations
 
 import threading
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import structlog
@@ -98,6 +99,37 @@ _LEGACY_ENABLED_SLUGS: frozenset[str] = frozenset(
         "yc_jobs",
     }
 )
+
+
+def disable_provider(slug: str, reason: str | None = None) -> None:
+    """Set `enabled=False` in the `providers` collection (idempotent).
+
+    Creates the doc if it doesn't exist (ensuring the fallback in
+    `is_provider_enabled` won't re-enable it on next boot).
+    Logs and swallows DB errors — auto-disable is a non-critical enhancement.
+    """
+    now = datetime.now(tz=timezone.utc)
+    try:
+        get_providers().update_one(
+            {"slug": slug},
+            {
+                "$set": {
+                    "enabled": False,
+                    "disabled_at": now,
+                    "disabled_reason": reason,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "slug": slug,
+                    "name": slug,
+                    "created_at": now,
+                },
+            },
+            upsert=True,
+        )
+        logger.info("provider.disabled", slug=slug, reason=reason)
+    except Exception as exc:  # noqa: BLE001 — non-critical
+        logger.warning("provider.disable_failed", slug=slug, error=str(exc))
 
 
 def is_provider_enabled(slug: str) -> bool:

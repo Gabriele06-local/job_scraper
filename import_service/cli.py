@@ -20,7 +20,7 @@ from pathlib import Path
 import structlog
 
 from config import settings
-from database.repository import ensure_indexes, get_jobs
+from database.repository import disable_provider, ensure_indexes, get_jobs
 from models.job import RawJob
 from utils.text_fixer import fix_mojibake
 
@@ -251,10 +251,15 @@ def cmd_import(args: argparse.Namespace) -> int:
         for record in pending_records:
             tracker.save(record)
             if tracker.should_disable(record.provider_name):
+                consecutive = tracker.consecutive_failures(record.provider_name)
+                disable_provider(
+                    record.provider_name,
+                    reason=f"Auto-disabled after {consecutive} consecutive import failures",
+                )
                 log.warning(
-                    "cli.import.provider_consecutive_failures",
+                    "cli.import.provider_disabled",
                     provider=record.provider_name,
-                    consecutive=3,
+                    consecutive=consecutive,
                 )
             if report_id:
                 report_tracker.add_source(report_id, record)

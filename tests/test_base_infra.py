@@ -353,6 +353,36 @@ def test_jobs_collection_accessible(mongo_db):
         repository._client = original
 
 
+def test_disable_provider_upserts_enabled_false(mongo_db):
+    """disable_provider must set enabled=False + metadata on the provider doc."""
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        slug = "test_connector"
+        reason = "3 consecutive failures"
+
+        repository.disable_provider(slug, reason=reason)
+
+        doc = repository.get_providers().find_one({"slug": slug})
+        assert doc is not None
+        assert doc["enabled"] is False
+        assert doc["disabled_reason"] == reason
+        assert doc["disabled_at"] is not None
+        assert doc["updated_at"] is not None
+        assert doc["created_at"] is not None
+        assert doc["name"] == slug
+
+        # idempotent: calling again doesn't crash
+        repository.disable_provider(slug, reason="again")
+
+        # is_provider_enabled returns False after disable
+        assert repository.is_provider_enabled(slug) is False
+    finally:
+        repository._client = original
+
+
 # ---------------------------------------------------------------------------
 # Groq wrapper: classify_job with mock
 # ---------------------------------------------------------------------------
