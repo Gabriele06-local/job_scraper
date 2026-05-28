@@ -383,6 +383,109 @@ def test_disable_provider_upserts_enabled_false(mongo_db):
         repository._client = original
 
 
+def test_get_seniorities_returns_collection(mongo_db):
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        col = repository.get_seniorities()
+        assert col.name == "seniorities"
+    finally:
+        repository._client = original
+
+
+def test_is_provider_enabled_fallback_to_legacy(mongo_db):
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        # Slug in _LEGACY_ENABLED_SLUGS but no doc in DB → True
+        assert repository.is_provider_enabled("reed") is True
+        # Slug not in legacy list and no doc in DB → False
+        assert repository.is_provider_enabled("nonexistent_provider") is False
+    finally:
+        repository._client = original
+
+
+def test_is_provider_enabled_exception_fallback(mongo_db):
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        # Force find_one to raise
+        col = repository.get_providers()
+        old_find = col.find_one
+        col.find_one = lambda *a, **kw: (_ for _ in ()).throw(Exception("db down"))
+        try:
+            # Should fall back to legacy whitelist
+            result = repository.is_provider_enabled("reed")
+            assert result is True
+        finally:
+            col.find_one = old_find
+    finally:
+        repository._client = original
+
+
+def test_disable_provider_exception_swallowed(mongo_db):
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        # Force update_one to raise
+        col = repository.get_providers()
+        old_update = col.update_one
+        col.update_one = lambda *a, **kw: (_ for _ in ()).throw(Exception("db error"))
+        try:
+            repository.disable_provider("test_slug", "reason")  # must not raise
+        finally:
+            col.update_one = old_update
+    finally:
+        repository._client = original
+
+
+def test_close_client_resets_singleton(mongo_db):
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        repository.close_client()
+        assert repository._client is None
+    finally:
+        repository._client = original
+
+
+def test_get_companies_returns_collection(mongo_db):
+    from database import repository
+
+    original = repository._client
+    repository._client = mongo_db.client
+    try:
+        col = repository.get_companies()
+        assert col.name == "companies"
+    finally:
+        repository._client = original
+
+
+def test_get_client_lazy_init():
+    from unittest.mock import patch as _patch
+
+    from database import repository
+
+    repository.close_client()
+    assert repository._client is None
+    with _patch("database.repository.MongoClient") as mock_mc:
+        mock_client = mock_mc.return_value
+        client = repository.get_client()
+        assert client is mock_client
+        mock_mc.assert_called_once()
+    repository.close_client()
+
+
 # ---------------------------------------------------------------------------
 # Groq wrapper: classify_job with mock
 # ---------------------------------------------------------------------------
