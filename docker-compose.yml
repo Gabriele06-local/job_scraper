@@ -47,7 +47,7 @@ services:
 
 networks:
   devboards:
-    external: true
+    driver: bridge
 
 volumes:
   health_data:

@@ -78,16 +78,22 @@ class HNRealtimeScraper:
         # pagination — we sweep a small set of broad keywords and union
         # their results. The endpoint is idempotent per query, so dedup
         # across keywords via seen_ids.
+        from utils.retry import requests_retry
+
+        @requests_retry
+        def _fetch_keyword(keyword: str) -> list | dict:
+            resp = requests.get(
+                _BASE_URL,
+                headers=headers,
+                params={"q": keyword},
+                timeout=_TIMEOUT,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
         for keyword in _KEYWORDS:
             try:
-                resp = requests.get(
-                    _BASE_URL,
-                    headers=headers,
-                    params={"q": keyword},
-                    timeout=_TIMEOUT,
-                )
-                resp.raise_for_status()
-                payload = resp.json()
+                payload = _fetch_keyword(keyword)
                 if isinstance(payload, list):
                     items = payload
                 elif isinstance(payload, dict):

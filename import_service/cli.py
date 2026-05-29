@@ -20,7 +20,7 @@ from pathlib import Path
 import structlog
 
 from config import settings
-from database.repository import ensure_indexes, get_jobs
+from database.repository import disable_provider, ensure_indexes, get_jobs
 from models.job import RawJob
 from utils.text_fixer import fix_mojibake
 
@@ -33,27 +33,22 @@ log = structlog.get_logger(__name__)
 
 
 def _dict_to_raw_job(d: dict) -> RawJob | None:  # type: ignore[type-arg]
-    """Convert a raw connector dict to a RawJob. Returns None if required fields missing."""
+    """Convert a canonical connector dict to a RawJob.
 
-    url: str = d.get("url") or d.get("link") or ""
-    # Repair upstream double-encoded UTF-8 ("Ã©" → "é") on all free-text
-    # fields before they reach the pipeline. Idempotent on clean strings.
+    Every connector MUST return dicts with keys matching :class:`CanonicalJob`
+    (see ``connectors/schema.py``). This function assumes the upstream has
+    already normalised field names — no fallback chains for legacy keys.
+    """
+
+    url: str = d.get("url") or ""
     title: str = fix_mojibake(d.get("title") or "")
     description: str = fix_mojibake(d.get("description") or "")
-
-    company = d.get("company") or {}
-    if isinstance(company, dict):
-        company_name = company.get("name") or d.get("company_name") or ""
-    else:
-        company_name = str(company) if company else d.get("company_name") or ""
-    company_name = fix_mojibake(company_name)
-
+    company_name: str = fix_mojibake(d.get("company_name") or "")
     source: str = d.get("source") or ""
 
     if not (url and title and company_name and source):
         return None
 
-    # posted_at: accept datetime or ISO string
     posted_raw = d.get("published_at") or d.get("posted_at")
     posted_at: datetime | None = None
     if isinstance(posted_raw, datetime):
@@ -256,10 +251,15 @@ def cmd_import(args: argparse.Namespace) -> int:
         for record in pending_records:
             tracker.save(record)
             if tracker.should_disable(record.provider_name):
+                consecutive = tracker.consecutive_failures(record.provider_name)
+                disable_provider(
+                    record.provider_name,
+                    reason=f"Auto-disabled after {consecutive} consecutive import failures",
+                )
                 log.warning(
-                    "cli.import.provider_consecutive_failures",
+                    "cli.import.provider_disabled",
                     provider=record.provider_name,
-                    consecutive=3,
+                    consecutive=consecutive,
                 )
             if report_id:
                 report_tracker.add_source(report_id, record)

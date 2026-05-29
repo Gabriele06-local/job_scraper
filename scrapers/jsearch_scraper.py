@@ -40,6 +40,8 @@ class JSearchScraper:
             log.warning("jsearch.no_api_key")
             return []
 
+        from utils.retry import requests_retry
+
         headers = {
             "X-RapidAPI-Key": self._api_key,
             "X-RapidAPI-Host": _RAPIDAPI_HOST,
@@ -47,22 +49,26 @@ class JSearchScraper:
         jobs: list[dict] = []
         seen_ids: set[str] = set()
 
+        @requests_retry
+        def _fetch_page(keyword: str, page: int) -> list[dict]:
+            resp = requests.get(
+                _BASE_URL,
+                headers=headers,
+                params={
+                    "query": keyword,
+                    "page": page,
+                    "num_pages": 1,
+                    "date_posted": "month",
+                },
+                timeout=_TIMEOUT,
+            )
+            resp.raise_for_status()
+            return resp.json().get("data") or []
+
         for keyword in _KEYWORDS:
             for page in range(1, _MAX_PAGES + 1):
                 try:
-                    resp = requests.get(
-                        _BASE_URL,
-                        headers=headers,
-                        params={
-                            "query": keyword,
-                            "page": page,
-                            "num_pages": 1,
-                            "date_posted": "month",
-                        },
-                        timeout=_TIMEOUT,
-                    )
-                    resp.raise_for_status()
-                    items = resp.json().get("data") or []
+                    items = _fetch_page(keyword, page)
                     if not items:
                         break
                     for item in items:

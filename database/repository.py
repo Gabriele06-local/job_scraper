@@ -6,6 +6,7 @@ Fails loudly on index errors (fixes P1-01: silent index swallow).
 from __future__ import annotations
 
 import threading
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import structlog
@@ -73,11 +74,15 @@ def get_providers() -> Collection:  # type: ignore[type-arg]
 # be explicitly enabled via the backoffice / seed script.
 _LEGACY_ENABLED_SLUGS: frozenset[str] = frozenset(
     {
+        "active_jobs_db",
         "adzuna",
         "arbeitnow",
         "ashby",
+        "faang_watch",
         "greenhouse",
         "himalayas",
+        "hn_hiring",
+        "hn_realtime",
         "iprogrammatori",
         "jobicy",
         "jooble",
@@ -88,9 +93,43 @@ _LEGACY_ENABLED_SLUGS: frozenset[str] = frozenset(
         "remoteok",
         "remotive",
         "rss",
+        "startup_jobs",
         "themuse",
+        "workday_jobs",
+        "yc_jobs",
     }
 )
+
+
+def disable_provider(slug: str, reason: str | None = None) -> None:
+    """Set `enabled=False` in the `providers` collection (idempotent).
+
+    Creates the doc if it doesn't exist (ensuring the fallback in
+    `is_provider_enabled` won't re-enable it on next boot).
+    Logs and swallows DB errors — auto-disable is a non-critical enhancement.
+    """
+    now = datetime.now(tz=timezone.utc)
+    try:
+        get_providers().update_one(
+            {"slug": slug},
+            {
+                "$set": {
+                    "enabled": False,
+                    "disabled_at": now,
+                    "disabled_reason": reason,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "slug": slug,
+                    "name": slug,
+                    "created_at": now,
+                },
+            },
+            upsert=True,
+        )
+        logger.info("provider.disabled", slug=slug, reason=reason)
+    except Exception as exc:  # noqa: BLE001 — non-critical
+        logger.warning("provider.disable_failed", slug=slug, error=str(exc))
 
 
 def is_provider_enabled(slug: str) -> bool:
@@ -169,6 +208,11 @@ def _ensure_jobs_indexes(db: Database) -> None:  # type: ignore[type-arg]
             name="language_status_posted_at",
         ),
         IndexModel([("source", ASCENDING)], name="source"),
+        IndexModel(
+            [("cross_source_hash", ASCENDING)],
+            sparse=True,
+            name="cross_source_hash",
+        ),
         IndexModel([("expires_at", ASCENDING)], sparse=True, name="expires_at_sparse"),
         IndexModel([("last_probed_at", ASCENDING)], sparse=True, name="last_probed_at_sparse"),
         IndexModel([("location.geo", "2dsphere")], name="location_geo_2dsphere"),

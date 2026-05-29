@@ -35,10 +35,18 @@ from models.job import (
     JobStatus,
     QualityTier,
     RawJob,
+    compute_cross_source_hash,
     compute_dedup_hash,
     normalize_text,
 )
-from pipeline.dedupe import check_fuzzy_dup, find_existing_job, merge_with_existing
+from pipeline.company_scorer import CompanyTrustScorer
+from pipeline.dedupe import (
+    check_fuzzy_dup,
+    find_cross_source_dup,
+    find_existing_job,
+    merge_cross_source,
+    merge_with_existing,
+)
 from pipeline.language_detector import detect_language
 from pipeline.prefilter import should_send_to_ai
 from pipeline.quality_gate import QualityRejectReason, evaluate
@@ -56,6 +64,7 @@ class PipelineCounters:
     prefilter_rejected: int = 0
     url_invalid: int = 0
     dedupe_hit: int = 0
+    cross_source_hit: int = 0
     fuzzy_dup_flagged: int = 0
     ai_classified: int = 0
     ai_unavailable: int = 0
@@ -115,6 +124,7 @@ class ImportPipeline:
         self._dry_run = dry_run
         self._report_tracker = report_tracker
         self._report_id = report_id
+        self._company_scorer = CompanyTrustScorer()
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -147,6 +157,10 @@ class ImportPipeline:
                 result.errors.append(f"{raw.url}: {exc}")
 
         result.cost_summary = cost_tracker.summary()
+
+        # Persist company trust scores
+        if not self._dry_run and self._company_scorer.company_count > 0:
+            self._company_scorer.persist_all(self._companies_col)
 
         logger.info(
             "pipeline.run_complete",
@@ -219,10 +233,36 @@ class ImportPipeline:
                 merge_with_existing(existing, raw, self._jobs_col)
             return
 
-        # Stage 2b: Fuzzy dedupe (flag only)
-        if check_fuzzy_dup(raw, self._jobs_col):
+        # Stage 2a: Cross-source dedup
+        cross_source_hash = compute_cross_source_hash(raw.title, raw.company_name)
+        cross_existing = find_cross_source_dup(cross_source_hash, raw.source, self._jobs_col)
+        if cross_existing is not None:
+            c.cross_source_hit += 1
+            logger.info(
+                "job.cross_source_hit",
+                title=raw.title[:80],
+                existing_url=cross_existing.url,
+                new_url=raw.url,
+                existing_source=cross_existing.source_info.source,
+                new_source=raw.source,
+            )
+            if not self._dry_run:
+                merge_cross_source(cross_existing, raw, self._jobs_col)
+            return
+
+        # Stage 2b: Fuzzy dedupe (merge)
+        fuzzy_existing = check_fuzzy_dup(raw, self._jobs_col)
+        if fuzzy_existing is not None:
             c.fuzzy_dup_flagged += 1
-            logger.debug("job.fuzzy_dup_flagged", title=raw.title[:80])
+            logger.info(
+                "job.fuzzy_dedup_merged",
+                title=raw.title[:80],
+                existing_source=fuzzy_existing.source_info.source,
+                new_source=raw.source,
+            )
+            if not self._dry_run:
+                merge_cross_source(fuzzy_existing, raw, self._jobs_col)
+            return
 
         # Stage 3: AI classification (with per-job timing)
         job = self._raw_to_job(raw, dedup_hash)
@@ -286,6 +326,14 @@ class ImportPipeline:
                     reason=job.reject_reason,
                 )
 
+            # Stage 4.5: Company trust scoring
+            self._company_scorer.record(
+                company_name_normalized=job.company.name_normalized,
+                job=job,
+                passed=job.status == JobStatus.ACTIVE,
+                quality_score=job.quality.quality_score,
+            )
+
         # Stage 5: Company upsert
         if not self._dry_run:
             company_id = self._upsert_company(job)
@@ -333,6 +381,7 @@ class ImportPipeline:
         return Job(
             url=raw.url,
             dedup_hash=dedup_hash,
+            cross_source_hash=compute_cross_source_hash(raw.title, raw.company_name),
             source_info=JobSource(source=raw.source, external_id=raw.external_id),
             content=JobContent(
                 title=raw.title,

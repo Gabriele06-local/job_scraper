@@ -177,7 +177,7 @@ Strict gate = desc≥200 AND skills≥1 AND has published_at AND has company.nam
 - **D-03-01**: `JobClassification` includes salary fields (salary_min, salary_max, currency). **Alt**: separate `JobSalary` only. **Rationale**: Groq extracts salary as part of classification; `classify_job() → JobClassification` must carry it. `Job.salary` (JobSalary) is populated by caller from classification output.
 - **D-03-02**: Invalid AI enum values coerced to defaults in `_GroqOutput` via `field_validator(mode='before')`. **Alt**: raise ValidationError. **Rationale**: AI sometimes returns novel strings; hard fail would mark job AI_UNAVAILABLE when classification is otherwise usable.
 - **D-03-03**: `ruff.toml` with `line-length=100` and per-file ignores for all legacy connectors/files. **Alt**: fix all legacy lint. **Rationale**: constraint "DO NOT touch existing connectors"; per-file ignores isolate legacy from new-code standards.
-- **D-03-04**: Skills lexicon split (technical_skills vs skills) deferred to claude-05. **Alt**: implement now. **Rationale**: lexicon is a separate concern requiring its own SPEC and test coverage; placeholder comment left in `classify_job`.
+- **D-03-04**: Skills lexicon split (technical_skills vs skills). Implemented in claude-06+ (`utils/skills_lexicon.py` — ~300-entry curated set, `split_skills()` called in `classifier.py`). Quality gate `_MIN_VALID_SKILLS` bumped from 1 to 2 post-split. **Alt**: keep deferred. **Rationale**: SPEC 03 already mandated >=2 post-split; deferral was temporary.
 
 ### claude-01 — Architecture Decisions (2026-05-01)
 Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
@@ -232,6 +232,13 @@ Source: `docs/specs/00..04`. Format: Decision / Alternatives / Rationale.
 - **D-09-02**: `.env.example` expanded to cover all `config.py` fields with inline comments. **Alt**: keep minimal. **Rationale**: first-run operator needs to know which vars are mandatory vs. optional without reading source.
 - **D-09-03**: `CHANGELOG.md` created at v1.0.0 grouping all claude-03..09 changes. **Alt**: per-feature changelogs. **Rationale**: single file easier to scan; v1.0.0 semantic marks the pipeline as stable.
 - **D-09-04**: `docs/runbooks/cost-monitoring.md` includes model-upgrade path (llama-3.1-8b-instant → llama-3.3-70b-versatile). **Rationale**: seniority accuracy 67.9% < 80%; operator should know cost impact before upgrading.
+
+### claude-10 — Prompt Tuning + Skills Lexicon (2026-05-26)
+
+- **D-10-01**: Seniority system prompt rules added (`_SYSTEM_PROMPT`). **Alt**: few-shot examples; schema descriptions. **Rationale**: minimal token bloat (~200 chars); title-as-primary-signal rule directly addresses 6/9 errors (mid→senior over-classification).
+- **D-10-02**: `utils/skills_lexicon.py` created (~300-entry curated set). `split_skills()` called in `classifier.py` post-Groq. **Alt**: AI splits. **Rationale**: deterministic; lexicon updates without prompt changes; already decided at D-01-16.
+- **D-10-03**: Quality gate `_MIN_VALID_SKILLS` bumped from 1 → 2 post-lexicon-split. **Alt**: keep 1. **Rationale**: SPEC 03 §2.1 requires >=2; temporary deferral (D-03-04) is resolved.
+- **D-10-04**: `cv_drop_score` (0..1) added to Groq schema, `_GroqOutput`, `JobClassification`, and `compute_quality_score` (weight 10%, taken from skills 25→20 and seniority 15→10). **Alt**: separate AI call. **Rationale**: single Groq call avoids extra cost; CV drop is a holistic posting-quality signal complementary to existing dimensions.
 
 ### claude-08 — Migration Runbook + Wipe-and-Reimport Script (2026-05-01)
 
@@ -310,6 +317,9 @@ Full issue list: `docs/reports/02-connectors-status.md`
 - Q-09 salary policy: SPEC 03 mitigates by allowing remote_mode substitute; revisit after first run metrics.
 
 - **claude-09 — DONE**: README rewrite, docs/runbooks/{troubleshooting,operations,cost-monitoring}.md, .env.example expanded, CHANGELOG.md v1.0.0, MEMORY.md status → STABLE.
+- **claude-10 — DONE**: Seniority prompt tuning (`_SYSTEM_PROMPT` rules, D-10-01). Skills lexicon split (`utils/skills_lexicon.py`, D-10-02). Quality gate `_MIN_VALID_SKILLS` 1→2 (D-10-03). CV Drop AI score integrated into quality score (D-10-04). 180 tests green.
+- **claude-10 note**: Run `python scripts/run_ai_baseline.py` (needs GROQ_API_KEY) to measure seniority accuracy improvement from 67.9% target 80%+.
+- **claude-10 note**: `utils/skills_lexicon.py` has ~300 entries. Add entries as new skills appear in real job postings.
 
 ### Watch-list (post-deploy)
 - Calibrate quality gate after first run: distribution of `gate_reject_*`.

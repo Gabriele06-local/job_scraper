@@ -84,6 +84,7 @@ def _job(classification: JobClassification | None = None, **overrides) -> Job:
 
 class TestComputeQualityScore:
     def test_perfect_score(self):
+        long_desc = "x " * 2000  # >3000 chars
         cl = _cls(
             technical_skills=["A", "B", "C", "D", "E"],
             seniority=Seniority.SENIOR,
@@ -91,8 +92,18 @@ class TestComputeQualityScore:
             salary_max=120000,
             remote_mode=RemoteMode.REMOTE,
             ai_confidence=1.0,
+            cv_drop_score=1.0,
+            quality_flags=["clear_jd", "has_requirements", "has_benefits", "has_tech_stack"],
+            requirements=["req1", "req2"],
+            benefits=["ben1"],
         )
-        assert compute_quality_score(cl) == 100
+        job = _job(classification=cl, content=JobContent(
+            title="Senior Python Developer",
+            title_normalized="senior python developer",
+            description=long_desc,
+            language=Language.EN,
+        ))
+        assert compute_quality_score(job) == 100
 
     def test_zero_score(self):
         cl = _cls(
@@ -102,11 +113,20 @@ class TestComputeQualityScore:
             salary_max=None,
             remote_mode=RemoteMode.UNKNOWN,
             ai_confidence=0.0,
+            quality_flags=[],
+            requirements=[],
+            benefits=[],
         )
-        assert compute_quality_score(cl) == 0
+        job = _job(classification=cl, content=JobContent(
+            title="X",
+            title_normalized="x",
+            description="short",
+            language=Language.EN,
+        ))
+        assert compute_quality_score(job) == 0
 
     def test_returns_int(self):
-        assert isinstance(compute_quality_score(_cls()), int)
+        assert isinstance(compute_quality_score(_job()), int)
 
 
 # ---------------------------------------------------------------------------
@@ -137,9 +157,15 @@ class TestPassesQualityGate:
         assert not ok
         assert reasons == [QualityRejectReason.ZERO_SKILLS.value]
 
-    def test_one_skill_passes_minimum_for_sdd_strict(self):
-        """SDD strict ZERO_SKILLS only fires at 0 — tier logic enforces ≥2/≥4."""
+    def test_one_skill_now_rejects_after_lexicon_split(self):
+        """Post-lexicon-split (D-03-04): ZERO_SKILLS fires at <2 (was <1)."""
         cl = _cls(technical_skills=["Python"])
+        ok, reasons = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
+        assert not ok
+        assert reasons == [QualityRejectReason.ZERO_SKILLS.value]
+
+    def test_two_skills_passes_minimum(self):
+        cl = _cls(technical_skills=["Python", "Django"])
         ok, _ = passes_quality_gate(cl, company_name="Acme", description=_LONG_DESC)
         assert ok is True
 

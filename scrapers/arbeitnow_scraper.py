@@ -1,11 +1,12 @@
 import requests
-import logging
+import structlog
+from utils.retry import safe_get
 from typing import List, Dict
 from datetime import datetime
 from .base_scraper import BaseScraper
 import time
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class ArbeitnowScraper(BaseScraper):
@@ -27,14 +28,14 @@ class ArbeitnowScraper(BaseScraper):
             data = {}
 
             for attempt in range(max_retries):
-                time.sleep(5)
                 try:
-                    response = requests.get(self.api_url, headers=headers, timeout=10)
+                    response = safe_get(self.api_url, headers=headers, timeout=10)
 
                     if response.status_code == 429:
                         retry_after = int(response.headers.get("Retry-After", 60))
                         logger.warning(
-                            f"Arbeitnow rate limited (429). Waiting {retry_after} seconds..."
+                            "arbeitnow.rate_limited",
+                            retry_after=retry_after,
                         )
                         time.sleep(retry_after)
                         continue
@@ -45,9 +46,9 @@ class ArbeitnowScraper(BaseScraper):
                 except requests.exceptions.RequestException as e:
                     if attempt == max_retries - 1:
                         raise e
-                    logger.warning(f"Arbeitnow request failed: {e}. Retrying...")
+                    logger.warning("arbeitnow.retry", error=str(e))
             else:
-                logger.error("Arbeitnow: Failed to fetch data after retries.")
+                logger.error("arbeitnow.max_retries_exceeded")
                 return []
 
             jobs = []
@@ -73,15 +74,12 @@ class ArbeitnowScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": title,
-                        "company": {
-                            "name": item.get("company_name"),
-                            "logo": None,
-                        },  # Logo URL is not always direct
+                        "company_name": item.get("company_name"),
                         "description": self.clean_description(description),
-                        "link": item.get("url"),
+                        "url": item.get("url"),
                         "location_raw": item.get("location"),
                         "source": "Arbeitnow",
-                        "original_language": "en",  # Mostly English/German
+                        "original_language": "en",
                         "published_at": pub_date,
                         "remote": item.get("remote", False),
                     }
@@ -90,5 +88,5 @@ class ArbeitnowScraper(BaseScraper):
             return jobs
 
         except Exception as e:
-            logger.error(f"Error scraping Arbeitnow: {e}")
+            logger.error("arbeitnow.fetch_error", error=str(e))
             return []

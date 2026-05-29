@@ -7,6 +7,7 @@ from typing import Any
 
 import requests
 import structlog
+from utils.retry import safe_get
 
 log = structlog.get_logger(__name__)
 
@@ -21,7 +22,7 @@ class AshbyScraper:
             slug = company["slug"]
             name = company["name"]
             try:
-                resp = requests.get(
+                resp = safe_get(
                     _BASE_URL.format(slug=slug),
                     params={"includeCompensation": "true"},
                     timeout=_TIMEOUT,

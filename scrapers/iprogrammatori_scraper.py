@@ -1,11 +1,11 @@
 import requests
-import logging
+import structlog
 from bs4 import BeautifulSoup
 from typing import List, Dict
 from datetime import datetime
 from .base_scraper import BaseScraper
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class IProgrammatoriScraper(BaseScraper):
@@ -57,24 +57,21 @@ class IProgrammatoriScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": title,
-                        "company": {
-                            "name": (
-                                item.find("company").text if item.find("company") else "Unknown"
-                            ),
-                            "logo": None,
-                        },
+                        "company_name": (
+                            item.find("company").text if item.find("company") else "Unknown"
+                        ),
                         "description": self.clean_description(description),
-                        "link": link,
+                        "url": link,
                         "location_raw": (item.find("city").text if item.find("city") else ""),
                         "source": "IProgrammatori",
                         "original_language": "it",
                         "published_at": pub_date,
-                        "remote": False,  # Feed doesn't explicitly state remote usually, AI will refine
+                        "remote": False,
                     }
                 )
 
             return jobs
 
         except Exception as e:
-            logger.error(f"Error scraping IProgrammatori: {e}")
+            logger.error("iprogrammatori.fetch_error", error=str(e))
             return []

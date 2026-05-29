@@ -19,6 +19,14 @@ _DEFAULT_RSS_URLS: dict[str, list[str]] = {
     "en": [
         "https://weworkremotely.com/categories/remote-programming-jobs.rss",
         "https://jobicy.com/feed",
+        "https://remotive.com/feed",
+        "https://www.feedance.com/jobs/rss.xml",
+    ],
+    "de": [
+        "https://news.software-developer.org/jobs.rss",
+    ],
+    "fr": [
+        "https://emplois.developpez.com/offres/techniques/rss.xml",
     ],
 }
 

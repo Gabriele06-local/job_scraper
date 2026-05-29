@@ -1,10 +1,10 @@
 import requests
-import logging
+import structlog
+from utils.retry import safe_get
 from typing import List, Dict
 from .base_scraper import BaseScraper
-import time
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class JobicyScraper(BaseScraper):
@@ -40,14 +40,12 @@ class JobicyScraper(BaseScraper):
                 "Referer": "https://jobicy.com/",
             }
 
-            time.sleep(1)
-
-            response = requests.get(self.BASE_URL, params=params, headers=headers, timeout=15)
+            response = safe_get(self.BASE_URL, params=params, headers=headers, timeout=15)
             response.raise_for_status()
             data = response.json()
 
             if not data.get("success"):
-                logger.warning(f"Jobicy API reported failure: {data.get('message')}")
+                logger.warning("jobicy.api_failure", message=data.get("message"))
                 return []
 
             jobs_list = data.get("jobs", [])
@@ -65,24 +63,21 @@ class JobicyScraper(BaseScraper):
                 all_jobs.append(
                     {
                         "title": title,
-                        "company": {
-                            "name": item.get("companyName", "Unknown"),
-                            "logo_url": item.get("companyLogo"),
-                        },
+                        "company_name": item.get("companyName", "Unknown"),
                         "description": self.clean_description(item.get("jobDescription", "")),
-                        "link": item.get("url", ""),
+                        "url": item.get("url", ""),
                         "source": "Jobicy",
                         "original_language": lang,
-                        "published_at": item.get("pubDate"),  # Usually YYYY-MM-DD HH:MM:SS
+                        "published_at": item.get("pubDate"),
                         "location_raw": item.get("jobGeo"),
-                        "employment_type": item.get("jobType"),  # e.g. full-time
+                        "employment_type": item.get("jobType"),
                         "salary_min": item.get("annualSalaryMin"),
                         "salary_max": item.get("annualSalaryMax"),
-                        "remote": True,  # Jobicy is remote-first
+                        "remote": True,
                     }
                 )
 
         except Exception as e:
-            logger.error(f"Error scraping Jobicy: {e}")
+            logger.error("jobicy.fetch_error", error=str(e))
 
         return all_jobs

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict
 from bs4 import BeautifulSoup
-import logging
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class BaseScraper(ABC):
@@ -86,7 +86,7 @@ class BaseScraper(ABC):
             return str(soup)
 
         except Exception as e:
-            logger.warning(f"Error normalizing HTML: {e}")
+            logger.warning("base_scraper.normalize_html_error", error=str(e))
             return html_content
 
     def clean_description(self, text: str) -> str:
@@ -128,5 +128,5 @@ class BaseScraper(ABC):
 
             return str(soup)
         except Exception as e:
-            logger.warning(f"Error cleaning description: {e}")
+            logger.warning("base_scraper.clean_description_error", error=str(e))
             return text
