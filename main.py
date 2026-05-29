@@ -472,20 +472,40 @@ class JobScraperOrchestrator:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Job Scraper Orchestrator")
-    parser.add_argument(
-        "--languages",
-        type=str,
-        help="Comma-separated list of languages (e.g. it,en,es)",
+    import sys
+    import warnings
+
+    warnings.warn(
+        "main.py is deprecated. Use 'python -m import_service.cli import' instead. "
+        "The new pipeline uses 24+ sources, Groq AI classification, pre-filtering, "
+        "quality gate, and proper deduplication.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-    parser.add_argument("--limit", type=int, help="Limit of total ads per language")
-    parser.add_argument("--days", type=int, default=1, help="Lookback window in days (default: 1)")
 
-    args = parser.parse_args()
+    # Delegate to the new pipeline CLI, translating legacy flags.
+    new_argv = [sys.argv[0].replace("main.py", "import_service.cli"), "import"]
+    args = sys.argv[1:]
+    i = 0
+    while i < len(args):
+        if args[i] == "--limit" and i + 1 < len(args):
+            new_argv.extend(["--limit", args[i + 1]])
+            i += 2
+        elif args[i] == "--languages" and i + 1 < len(args):
+            # Languages are now set via SCRAPE_LANGUAGES env var; ignore.
+            i += 2
+        elif args[i] == "--days" and i + 1 < len(args):
+            # Days window is now part of config; ignore.
+            i += 2
+        else:
+            new_argv.append(args[i])
+            i += 1
 
-    languages = args.languages.split(",") if args.languages else None
+    print("=" * 60, file=sys.stderr)
+    print("  DEPRECATION WARNING: main.py is deprecated.", file=sys.stderr)
+    print("  Use: python -m import_service.cli import", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
 
-    orchestrator = JobScraperOrchestrator(
-        languages=languages, limit_per_language=args.limit, days_window=args.days
-    )
-    asyncio.run(orchestrator.run())
+    from import_service.cli import main
+
+    sys.exit(main(new_argv))

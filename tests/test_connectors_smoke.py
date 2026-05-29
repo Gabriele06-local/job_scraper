@@ -22,6 +22,7 @@ from connectors.jobicy import JobicyConnector
 from connectors.jooble import JoobleConnector
 from connectors.remoteok import RemoteOKConnector
 from connectors.rss import RSSConnector
+from connectors.schema import REQUIRED_KEYS
 from database.repository import _LEGACY_ENABLED_SLUGS
 
 # ---------------------------------------------------------------------------
@@ -250,6 +251,15 @@ def test_remoteok_fetch_with_data() -> None:
         jobs = list(itertools.islice(c.fetch(), 5))
     assert len(jobs) == 1
     assert jobs[0]["title"] == "Python Engineer"
+
+
+def test_fetch_yields_canonical_keys() -> None:
+    """Every dict yielded by fetch() must have all REQUIRED_KEYS."""
+    for c in get_enabled_connectors():
+        sample = list(itertools.islice(c.fetch(), 3))
+        for i, job in enumerate(sample):
+            for key in REQUIRED_KEYS:
+                assert key in job, f"{c.source_name}[{i}]: missing '{key}'"
 
 
 def test_rss_fetch_empty_feed() -> None:

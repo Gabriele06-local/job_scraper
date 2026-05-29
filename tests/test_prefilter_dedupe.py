@@ -577,3 +577,70 @@ class TestGroundTruthPrefilter:
             f"Expected more passes than rejects in curated set. "
             f"pass={pass_count}, reject={reject_count}, total={total}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Pre-filter: edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestPrefilterExceptionHandlers:
+    def test_is_valid_url_parse_exception(self):
+        with patch("pipeline.prefilter.urlparse", side_effect=ValueError("bad url")):
+            from pipeline.prefilter import _is_valid_url
+            assert _is_valid_url("http://example.com") is False
+
+    def test_is_closed_listing_url_exception(self):
+        with patch("pipeline.prefilter.parse_qs", side_effect=ValueError("bad query")):
+            from pipeline.prefilter import _is_closed_listing_url
+            assert _is_closed_listing_url("http://example.com") is False
+
+
+class TestPrefilterEdgeCases:
+    def test_closed_listing_url_rejected(self):
+        ok, reason = should_send_to_ai(_raw(url="https://jobs.example.com/1?closedJob=true"))
+        assert not ok
+        assert reason == RejectReason.CLOSED_LISTING.value
+
+    def test_closed_listing_url_case_insensitive(self):
+        ok, reason = should_send_to_ai(_raw(url="https://jobs.example.com/1?closedJob=True"))
+        assert not ok
+        assert reason == RejectReason.CLOSED_LISTING.value
+
+    def test_closed_listing_url_exception_safe(self):
+        ok, _ = should_send_to_ai(_raw(url=""))  # empty URL fails earlier at _is_valid_url
+        assert not ok
+
+    def test_naive_posted_at_treated_as_utc(self):
+        naive = _NOW.replace(tzinfo=None)
+        ok, _ = should_send_to_ai(_raw(posted_at=naive, original_language="en"))
+        assert ok is True
+
+    def test_naive_posted_at_expired(self):
+        old = (_NOW - timedelta(days=61)).replace(tzinfo=None)
+        ok, reason = should_send_to_ai(_raw(posted_at=old))
+        assert not ok
+        assert reason == RejectReason.EXPIRED_LISTING.value
+
+    def test_invalid_url_junk(self):
+        ok, reason = should_send_to_ai(_raw(url="not a url at all !!!"))
+        assert not ok
+        assert reason == RejectReason.MISSING_REQUIRED_FIELDS.value
+
+    def test_invalid_url_empty_netloc(self):
+        ok, reason = should_send_to_ai(_raw(url="https://"))
+        assert not ok
+        assert reason == RejectReason.MISSING_REQUIRED_FIELDS.value
+
+    def test_declared_language_invalid_value(self):
+        ok, reason = should_send_to_ai(
+            _raw(original_language="invalid_lang_code", description="a" * 50)
+        )
+        assert not ok
+        assert reason == RejectReason.DESCRIPTION_TOO_SHORT.value  # falls through to desc check
+
+    def test_declared_language_unsupported_falls_back_to_detection(self):
+        ok, reason = should_send_to_ai(_raw(original_language="ar", description="a" * 200))
+        assert not ok
+        # falls through to language detection which returns an unsupported lang
+        assert reason == RejectReason.LANGUAGE_NOT_SUPPORTED.value

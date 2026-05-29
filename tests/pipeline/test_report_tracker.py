@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import mongomock
 import pytest
@@ -185,3 +186,126 @@ def test_add_failure_with_unknown_run_id_is_noop(db: mongomock.Database) -> None
     tracker = ImportReportTracker(db)
     tracker.add_failure("", "ZERO_SKILLS")  # silent no-op
     assert db["import_reports"].count_documents({}) == 0
+
+
+# ---------------------------------------------------------------------------
+# Failure reason counters
+# ---------------------------------------------------------------------------
+
+
+def test_add_failure_url_invalid_bumps_dedicated_counter(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    tracker.add_failure(run_id, "URL_INVALID", count=2)
+    doc = db["import_reports"].find_one({"run_id": run_id})
+    assert doc["total_url_invalid"] == 2
+
+
+def test_add_failure_soft_404_bumps_dedicated_counter(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    tracker.add_failure(run_id, "SOFT_404", count=1)
+    doc = db["import_reports"].find_one({"run_id": run_id})
+    assert doc["total_expired_detected"] == 1
+
+
+def test_add_failure_duplicate_bumps_dedicated_counter(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    tracker.add_failure(run_id, "DUPLICATE", count=3)
+    doc = db["import_reports"].find_one({"run_id": run_id})
+    assert doc["total_skipped_duplicate"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Early-return guards (empty run_id)
+# ---------------------------------------------------------------------------
+
+
+def test_add_source_empty_run_id_is_silent(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    tracker.add_source("", _make_run("test"))
+    assert db["import_reports"].count_documents({}) == 0
+
+
+def test_record_enrichment_ms_empty_run_id_is_silent(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    tracker.record_enrichment_ms("", 100.0)  # no crash
+
+
+def test_finish_empty_run_id_is_silent(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    tracker.finish("")  # no crash
+
+
+# ---------------------------------------------------------------------------
+# Exception handlers
+# ---------------------------------------------------------------------------
+
+
+def test_start_insert_exception_logged(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    # Mock insert_one to raise
+    with patch.object(tracker._col, "insert_one", side_effect=Exception("db error")):
+        run_id = tracker.start(ai_model="x", language_targets=["en"])
+        assert run_id is not None
+
+
+def test_add_source_update_exception_logged(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    with patch.object(tracker._col, "update_one", side_effect=Exception("db error")):
+        tracker.add_source(run_id, _make_run("test"))  # no crash
+
+
+def test_add_failure_update_exception_logged(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    with patch.object(tracker._col, "update_one", side_effect=Exception("db error")):
+        tracker.add_failure(run_id, "ZERO_SKILLS")  # no crash
+
+
+def test_finish_update_exception_logged(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    with patch.object(tracker._col, "update_one", side_effect=Exception("db error")):
+        tracker.finish(run_id)  # no crash
+
+
+# ---------------------------------------------------------------------------
+# Add source with errors
+# ---------------------------------------------------------------------------
+
+
+def test_add_source_with_errors_pushes_errors(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    run_id = tracker.start(ai_model="x", language_targets=["en"])
+    run = _make_run("test", failures={"ZERO_SKILLS": 1})
+    run.errors = ["something went wrong"]
+    tracker.add_source(run_id, run)
+    doc = db["import_reports"].find_one({"run_id": run_id})
+    assert doc is not None
+    assert len(doc.get("errors", [])) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Index conflict (OperationFailure with code != 85 re-raises)
+# ---------------------------------------------------------------------------
+
+
+def test_index_operation_failure_non_conflict_raises(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    op_failure = pytest.importorskip("pymongo.errors").OperationFailure
+    with patch.object(
+        tracker._col, "create_index", side_effect=op_failure("other error", code=86)
+    ):
+        with pytest.raises(op_failure):
+            tracker._ensure_indexes()
+
+
+def test_index_operation_failure_code_85_logged_not_raised(db: mongomock.Database) -> None:
+    tracker = ImportReportTracker(db)
+    op_failure = pytest.importorskip("pymongo.errors").OperationFailure
+    with patch.object(tracker._col, "create_index") as mock_create:
+        mock_create.side_effect = op_failure("index already exists under different name", code=85)
+        tracker._ensure_indexes()  # must not raise

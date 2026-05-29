@@ -183,8 +183,8 @@ class JobClassification(BaseModel):
     Includes salary because the AI classifier extracts salary along with
     the rest. JobSalary on Job is populated from these fields by the caller.
 
-    technical_skills vs skills split is done by the skills lexicon (claude-06).
-    Until then classify_job() puts all Groq skills into technical_skills.
+    technical_skills vs skills split is done by utils/skills_lexicon (D-03-04).
+    The classifier calls split_skills() on the raw Groq skills output.
     """
 
     technical_skills: list[str] = Field(default_factory=list)
@@ -199,6 +199,8 @@ class JobClassification(BaseModel):
     requirements: list[str] = Field(default_factory=list)
     benefits: list[str] = Field(default_factory=list)
     quality_flags: list[str] = Field(default_factory=list)
+    # CV Drop — AI-assessed likelihood a qualified candidate would apply (0..1)
+    cv_drop_score: float = 0.0
     # Salary extracted by AI (copied to Job.salary by the pipeline stage)
     salary_min: int | None = None
     salary_max: int | None = None
@@ -244,6 +246,7 @@ class Job(BaseModel):
     # Identity
     url: str
     dedup_hash: str
+    cross_source_hash: str = ""
 
     # Sub-models
     source_info: JobSource
@@ -294,6 +297,7 @@ class Job(BaseModel):
             "source": self.source_info.source,
             "external_id": self.source_info.external_id,
             "dedup_hash": self.dedup_hash,
+            "cross_source_hash": self.cross_source_hash,
             # Prisma FK — written as ObjectId so Prisma @db.ObjectId reads it correctly
             "company_id": ObjectId(self.company.id) if self.company.id else None,
             # Content
@@ -348,6 +352,7 @@ class Job(BaseModel):
             "requirements": cl.requirements,
             "benefits": cl.benefits,
             "quality_flags": cl.quality_flags,
+            "cv_drop_score": cl.cv_drop_score,
             "ai_confidence": cl.ai_confidence,
             "ai_model": cl.ai_model,
             "ai_call_at": cl.ai_call_at,
@@ -424,6 +429,7 @@ class Job(BaseModel):
             id=str(doc["_id"]) if "_id" in doc else None,
             url=doc.get("url") or doc.get("link", ""),
             dedup_hash=doc.get("dedup_hash", ""),
+            cross_source_hash=doc.get("cross_source_hash", ""),
             source_info=JobSource(
                 source=doc.get("source", ""),
                 external_id=doc.get("external_id"),
@@ -468,6 +474,7 @@ class Job(BaseModel):
                 requirements=doc.get("requirements", []),
                 benefits=doc.get("benefits", []),
                 quality_flags=doc.get("quality_flags", []),
+                cv_drop_score=doc.get("cv_drop_score", 0.0),
                 ai_confidence=doc.get("ai_confidence", 0.0),
                 ai_model=doc.get("ai_model", ""),
                 ai_call_at=doc.get("ai_call_at"),
@@ -539,6 +546,12 @@ def normalize_text(text: str) -> str:
 def compute_dedup_hash(title: str, company_name: str, source: str) -> str:
     """sha1(title_normalized|company_normalized|source_lower) per SPEC 01 §3."""
     normalized = f"{normalize_text(title)}|{normalize_text(company_name)}|{source.lower()}"
+    return hashlib.sha1(normalized.encode()).hexdigest()  # noqa: S324
+
+
+def compute_cross_source_hash(title: str, company_name: str) -> str:
+    """sha1(title_normalized|company_normalized) — stable across sources."""
+    normalized = f"{normalize_text(title)}|{normalize_text(company_name)}"
     return hashlib.sha1(normalized.encode()).hexdigest()  # noqa: S324
 
 

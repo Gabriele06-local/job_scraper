@@ -213,3 +213,102 @@ def test_meaningful_truth_table() -> None:
         if actual is not expected:
             failures.append(f"{label}: expected {expected}, got {actual}")
     assert not failures, "\n".join(failures)
+
+
+# ---------------------------------------------------------------------------
+# Scoring function boundary coverage
+# ---------------------------------------------------------------------------
+
+
+def test_description_score_boundaries() -> None:
+    from pipeline.quality_gate import _description_score
+
+    assert _description_score("x" * 3000) == 1.0
+    assert _description_score("x" * 1000) == 0.7
+    assert _description_score("x" * 200) == 0.4
+    assert _description_score("x" * 50) == 0.0
+
+
+def test_quality_flags_score_all_flags() -> None:
+    from pipeline.quality_gate import _quality_flags_score
+
+    pos = _quality_flags_score(["clear_jd", "has_requirements", "has_benefits", "has_tech_stack"])
+    assert 0.9 <= pos <= 1.0
+
+    neg = _quality_flags_score(["vague", "boilerplate"])
+    assert neg == 0.0
+
+    mixed = _quality_flags_score(["clear_jd", "vague"])
+    assert mixed == 0.0
+
+
+def test_requirements_score_boundaries() -> None:
+    from pipeline.quality_gate import _requirements_score
+
+    assert _requirements_score(["a", "b", "c"], []) == 1.0
+    assert _requirements_score(["a", "b"], []) == 0.7
+    assert _requirements_score(["a"], []) == 0.4
+    assert _requirements_score([], []) == 0.0
+
+
+def test_is_premium_rejection_paths() -> None:
+    cl = _cls(
+        technical_skills=["Go", "K8s", "AWS", "Postgres"],
+        salary_min=None,
+        salary_max=None,
+        ai_confidence=0.92,
+        quality_flags=["clear_jd", "has_requirements"],
+    )
+    from pipeline.quality_gate import evaluate, is_premium
+
+    out = evaluate(_job(classification=cl))
+    assert out.status == JobStatus.ACTIVE
+    assert not is_premium(out.classification)
+
+
+def test_is_premium_low_confidence() -> None:
+    from pipeline.quality_gate import is_premium
+
+    cl = _cls(
+        technical_skills=["Go", "K8s", "AWS", "Postgres"],
+        salary_min=80000,
+        salary_max=120000,
+        ai_confidence=0.5,
+        quality_flags=["clear_jd", "has_requirements"],
+    )
+    assert not is_premium(cl)
+
+
+def test_is_premium_missing_flags() -> None:
+    from pipeline.quality_gate import is_premium
+
+    cl = _cls(
+        technical_skills=["Go", "K8s", "AWS", "Postgres"],
+        salary_min=80000,
+        salary_max=120000,
+        ai_confidence=0.92,
+        quality_flags=[],
+    )
+    assert not is_premium(cl)
+
+
+def test_is_premium_boilerplate_flag() -> None:
+    from pipeline.quality_gate import is_premium
+
+    cl = _cls(
+        technical_skills=["Go", "K8s", "AWS", "Postgres"],
+        salary_min=80000,
+        salary_max=120000,
+        ai_confidence=0.92,
+        quality_flags=["clear_jd", "has_requirements", "boilerplate"],
+    )
+    assert not is_premium(cl)
+
+
+def test_compute_quality_score_partial_salary() -> None:
+    from pipeline.quality_gate import compute_quality_score
+
+    cl = _cls(salary_min=50000, salary_max=None)
+    job = _job(classification=cl)
+    score = compute_quality_score(job)
+    assert 0 < score < 100

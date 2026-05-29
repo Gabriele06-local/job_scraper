@@ -1,77 +1,73 @@
-"""Unit tests for Personio ATS connector (XML parsing)."""
+"""Unit tests for Personio ATS XML connector — published_at extraction."""
 
 from __future__ import annotations
 
-import itertools
 from unittest.mock import MagicMock, patch
 
 from connectors.personio import PersonioConnector
 
-_VALID_XML = """<?xml version='1.0' encoding='UTF-8'?>
-<workzag-jobs>
-  <position>
-    <id>1001</id>
-    <name>Python Backend Engineer</name>
-    <department>Engineering</department>
-    <office>Berlin</office>
-    <job-descriptions>
-      <job-description>
-        <name>About the role</name>
-        <value>Build Python services at scale.</value>
-      </job-description>
-    </job-descriptions>
-    <employment-type>permanent</employment-type>
-    <schedule>full-time</schedule>
-    <recruitingCategory>Software Engineering</recruitingCategory>
-    <applicationUrl>https://myco.jobs.personio.de/job/1001</applicationUrl>
-  </position>
-</workzag-jobs>
-"""
 
-_EMPTY_XML = "<?xml version='1.0'?><workzag-jobs></workzag-jobs>"
-
-
-def _mock_response(body: str, status: int = 200) -> MagicMock:
+def _xml_response(xml: str) -> MagicMock:
     resp = MagicMock()
-    resp.status_code = status
-    resp.content = body.encode()
+    resp.status_code = 200
+    resp.content = xml.encode()
     resp.raise_for_status.return_value = None
     return resp
 
 
-def test_personio_empty_xml() -> None:
+_PERSONIO_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<workboard>
+  <position>
+    <id>123</id>
+    <name>Software Engineer</name>
+    <office>Berlin</office>
+    <jobDescriptions><![CDATA[We are hiring a software engineer.]]></jobDescriptions>
+    <createdAt>{created}</createdAt>
+  </position>
+</workboard>"""
+
+
+def test_personio_parses_created_at() -> None:
+    xml = _PERSONIO_XML.format(created="2026-04-15T10:00:00Z")
     with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response(_EMPTY_XML)
+        mock_get.return_value = _xml_response(xml)
         c = PersonioConnector()
-        c._companies = [{"name": "MyCo", "slug": "myco"}]
         jobs = list(c.fetch())
-    assert isinstance(jobs, list)
+    assert len(jobs) >= 1
+    assert all(j["published_at"] is not None for j in jobs)
 
 
-def test_personio_parses_job() -> None:
+def test_personio_parses_created_at_without_z() -> None:
+    xml = _PERSONIO_XML.format(created="2026-04-15T10:00:00")
     with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response(_VALID_XML)
+        mock_get.return_value = _xml_response(xml)
         c = PersonioConnector()
-        c._companies = [{"name": "MyCo", "slug": "myco"}]
-        jobs = list(itertools.islice(c.fetch(), 5))
-    assert len(jobs) == 1
-    assert isinstance(jobs[0], dict)
-    assert jobs[0]["title"] == "Python Backend Engineer"
+        jobs = list(c.fetch())
+    assert len(jobs) >= 1
+    assert all(j["published_at"] is not None for j in jobs)
+
+
+def test_personio_empty_when_no_date() -> None:
+    xml = _PERSONIO_XML.format(created="")
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = _xml_response(xml)
+        c = PersonioConnector()
+        jobs = list(c.fetch())
+    assert len(jobs) >= 1
+    assert all(j["published_at"] is None for j in jobs)
+
+
+def test_personio_no_crash_on_xml_parse_error() -> None:
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = _xml_response("not xml")
+        c = PersonioConnector()
+        jobs = list(c.fetch())
+    assert jobs == []
 
 
 def test_personio_no_crash_on_http_error() -> None:
     with patch("requests.get") as mock_get:
-        mock_get.side_effect = Exception("DNS failure")
+        mock_get.side_effect = Exception("timeout")
         c = PersonioConnector()
-        c._companies = [{"name": "MyCo", "slug": "myco"}]
         jobs = list(c.fetch())
-    assert isinstance(jobs, list)
-
-
-def test_personio_no_crash_on_bad_xml() -> None:
-    with patch("requests.get") as mock_get:
-        mock_get.return_value = _mock_response("not xml at all")
-        c = PersonioConnector()
-        c._companies = [{"name": "MyCo", "slug": "myco"}]
-        jobs = list(c.fetch())
-    assert isinstance(jobs, list)
+    assert jobs == []

@@ -65,6 +65,7 @@ from models.job import (
     RoleFamily,
     Seniority,
 )
+from utils.skills_lexicon import split_skills
 
 logger = structlog.get_logger(__name__)
 
@@ -174,6 +175,16 @@ _CLASSIFICATION_SCHEMA: dict[str, Any] = {
             },
         },
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "cv_drop_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": (
+                "How likely a qualified candidate submits their CV here "
+                "(0=poor, 1=compelling). Based on clarity, salary, benefits, "
+                "tech stack appeal, and posting completeness."
+            ),
+        },
     },
 }
 
@@ -183,7 +194,18 @@ _SYSTEM_PROMPT = (
     "a JSON object that conforms to the provided schema. No prose, no markdown, no "
     'explanations. If a field is unknown, use the schema\'s "unknown" enum value or '
     "null per the schema. Do not invent skills or salary numbers. Confidence is your "
-    "self-assessment of overall extraction reliability (0..1)."
+    "self-assessment of overall extraction reliability (0..1).\n\n"
+    "Seniority rules — use the TITLE as the primary signal, then the description:\n"
+    '- "senior" only when the title explicitly contains "Senior"/"Sr." or '
+    "the description requires 5+ years of experience\n"
+    '- "junior" when the title contains "Junior"/"Jr."/"Entry"/"Trainee" '
+    'or the posting says "no experience required"\n'
+    '- "mid" for roles with 1-4 years of experience and NO seniority keyword in the title\n'
+    '- "unknown" when no experience level or seniority keyword is mentioned at all;\n'
+    '  do NOT invent a seniority level — "unknown" is correct when the posting is silent\n\n'
+    "cv_drop_score (0..1): rate how likely a qualified candidate would submit their CV.\n"
+    "High scores need clear salary, benefits, tech stack, and a well-written description.\n"
+    "Low scores: vague/boilerplate text, no salary or benefits, poor formatting."
 )
 
 _SCHEMA_STR = json.dumps(_CLASSIFICATION_SCHEMA, separators=(",", ":"))
@@ -244,6 +266,7 @@ class _GroqOutput(BaseModel):
     currency: str | None = None
     languages_required: list[str] = []
     quality_flags: list[str] = []
+    cv_drop_score: float = 0.0
     confidence: float = 0.0
 
     @field_validator("category", mode="before")
@@ -514,10 +537,10 @@ class GroqClassifier:
             logger.warning("groq.validation_error", error=str(e))
             raise
 
-        # skills lexicon split deferred to claude-06; all Groq skills → technical_skills
+        tech, non_tech = split_skills(parsed.skills)
         return JobClassification(
-            technical_skills=parsed.skills,
-            skills=[],
+            technical_skills=tech,
+            skills=non_tech,
             category=parsed.category,
             role_family=parsed.role_family,
             seniority=parsed.seniority,
@@ -528,6 +551,7 @@ class GroqClassifier:
             currency=parsed.currency,
             languages_required=parsed.languages_required,
             quality_flags=parsed.quality_flags,
+            cv_drop_score=parsed.cv_drop_score,
             ai_confidence=parsed.confidence,
             ai_model=settings.groq_model,
             ai_call_at=datetime.now(tz=timezone.utc),

@@ -2,7 +2,7 @@
 
 Collection: `import_runs`
 Schema: see SDD §I.2 (LOCKED CONTRACT — backend Prisma model depends on it).
-Auto-disable logic: 3 consecutive failures → caller flips the REGISTRY entry.
+Auto-disable logic: 3 consecutive failures → caller flips `providers.enabled`.
 
 Migration note: the new fields (report_id, language_target, passed_quality_gate,
 failure_reasons, avg_enrichment_ms, errors, quality_score, connector_crashed,

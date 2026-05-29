@@ -1,5 +1,6 @@
 import requests
-import logging
+import structlog
+from utils.retry import safe_post
 import os
 from datetime import datetime, timedelta
 from typing import List, Dict
@@ -7,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .base_scraper import BaseScraper
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _is_closed_jooble_job(url: str) -> bool:
@@ -62,17 +63,10 @@ class JoobleScraper(BaseScraper):
         }
 
         try:
-            # Disable SSL verification for Jooble API as it often has issues in some environments
-            import urllib3
-
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-            response = requests.post(url, json=payload, headers=headers, timeout=10, verify=False)
+            response = safe_post(url, json=payload, headers=headers, timeout=10)
 
             if response.status_code == 403:
-                logger.error(
-                    f"Jooble API 403 Forbidden for {lang} ({url}). Your API Key might be restricted to a specific region (e.g. it.jooble.org)."
-                )
+                logger.error("jooble.403_forbidden", lang=lang, url=url)
                 return []
 
             response.raise_for_status()
@@ -88,9 +82,9 @@ class JoobleScraper(BaseScraper):
                 jobs.append(
                     {
                         "title": item.get("title"),
-                        "company": {"name": item.get("company") or "Unknown"},
+                        "company_name": item.get("company") or "Unknown",
                         "description": self.clean_description(item.get("snippet")),
-                        "link": link,
+                        "url": link,
                         "location_raw": item.get("location"),
                         "source": f"Jooble ({item.get('source', 'Unknown')})",
                         "original_language": lang,
@@ -98,10 +92,8 @@ class JoobleScraper(BaseScraper):
                     }
                 )
             if skipped_closed:
-                logger.info(
-                    f"Jooble: skipped {skipped_closed} closed jobs for '{keyword}' ({lang})"
-                )
+                logger.info("jooble.skipped_closed", count=skipped_closed, keyword=keyword, lang=lang)
             return jobs
         except Exception as e:
-            logger.error(f"Error scraping Jooble API: {e}")
+            logger.error("jooble.fetch_error", error=str(e))
             return []

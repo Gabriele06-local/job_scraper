@@ -81,18 +81,24 @@ class HNHiringScraper:
         seen_ids: set[str] = set()
         total_pages = _MAX_PAGES
 
+        from utils.retry import requests_retry
+
+        @requests_retry
+        def _fetch_page(page: int) -> dict:
+            resp = requests.get(
+                _BASE_URL,
+                headers=headers,
+                params={"page": page, "perPage": _PER_PAGE},
+                timeout=_TIMEOUT,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
         for page in range(1, _MAX_PAGES + 1):
             if page > total_pages:
                 break
             try:
-                resp = requests.get(
-                    _BASE_URL,
-                    headers=headers,
-                    params={"page": page, "perPage": _PER_PAGE},
-                    timeout=_TIMEOUT,
-                )
-                resp.raise_for_status()
-                payload = resp.json()
+                payload = _fetch_page(page)
                 # Update total_pages once we know it.
                 if isinstance(payload, dict):
                     reported = payload.get("totalPages")
@@ -143,7 +149,9 @@ class HNHiringScraper:
             posted_dt = _parse_iso(_first_str(item, "createdAt", "postedAt")) or _epoch_to_dt(
                 item.get("time")
             )
-            keywords_summary = ""
+
+            body = _first_str(item, "text", "body", "content")
+            body_text = body if body else ""
 
             results: list[dict] = []
             for idx, role in enumerate(roles):
@@ -160,13 +168,22 @@ class HNHiringScraper:
 
                 keywords = role.get("keywords") or []
                 if isinstance(keywords, list) and keywords:
-                    keywords_summary = "Keywords: " + ", ".join(str(k) for k in keywords if k)
+                    kw = [str(k) for k in keywords if k]
+                else:
+                    kw = []
+
+                desc_parts = []
+                if body_text:
+                    desc_parts.append(body_text)
+                if kw:
+                    desc_parts.append("Keywords: " + ", ".join(kw))
+                description = "\n\n".join(desc_parts) if desc_parts else title
 
                 results.append(
                     {
                         "title": title,
                         "company_name": company,
-                        "description": keywords_summary,
+                        "description": description,
                         "url": url,
                         "source": "HN Who is Hiring",
                         "original_language": "en",

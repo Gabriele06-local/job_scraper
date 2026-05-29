@@ -88,4 +88,51 @@ Versioning: [SemVer](https://semver.org/).
 
 ---
 
+## [0.3.0] — 2026-05-29
+
+### Added
+
+**Schema & Data Quality**
+- `connectors/schema.py`: `CanonicalJob` TypedDict with `REQUIRED_KEYS` + `validate()`
+- 7 scrapers normalized to canonical keys: adzuna, arbeitnow, iprogrammatori, jobicy, jooble, remoteok, rss
+- `_dict_to_raw_job()` simplified in `cli.py`
+- Mojibake fix: `utils/text_fixer.py` + migration script
+- Geocode backfill: `cmd_geocode` in CLI via Nominatim (OpenStreetMap, free)
+
+**Pipeline Enhancements**
+- CV Drop AI: `cv_drop_score` (0..1) in Groq schema, quality score rebalanced
+- Quality scoring enhanced (9 dimensions, cv_drop 10%)
+- Cross-source dedup: `cross_source_hash`, `find_cross_source_dup()`, `merge_cross_source()`
+- Fuzzy dedup upgraded to merge (Stage 2b calls `merge_cross_source()`, skips AI + quality gate)
+- Company trust scoring: `pipeline/company_scorer.py` (7 dimensions, Stage 4.5)
+- Seniority prompt tuning: title primary signal, senior only for keyword/5+yr, unknown when silent
+- Skills lexicon split: `utils/skills_lexicon.py` (~300 skills), `split_skills()` post-Groq
+
+**Connectors**
+- 7 RapidAPI connectors enabled: active_jobs_db, faang_watch, hn_hiring, hn_realtime, startup_jobs, workday_jobs, yc_jobs
+
+**Auto-Disable**
+- Connectors auto-disabled after 3 consecutive failures
+- `disable_provider()` upserts `enabled=False` in `providers` collection
+- `should_disable()` / `consecutive_failures()` in `pipeline/import_run.py`
+
+**Tests**
+- Coverage: dedupe 21%→100% (21 tests), orchestrator 34%→90% (19 tests)
+- Coverage: quality_gate 79%→99% (8 tests), prefilter 73%→100% (11 tests)
+- Coverage: report 72%→100% (13 tests), repository 71%→86% (6 tests)
+- 5 new connector test files: adzuna, arbeitnow, iprogrammatori, jobicy, remoteok
+- Schema validation test in `test_connectors_smoke.py`
+
+### Changed
+- `VERSION` bumped to 0.3.0
+- All 7 new commits pushed to fork `Gabriele06-local/job_scraper` feature branch
+
+### Known Issues
+- PR #5 awaiting review/merge from upstream (`micio86dev:develop`)
+- AI baseline cannot run: `GROQ_API_KEY` not set (`.env` missing, only `.env.example`)
+- 1 pre-existing test fails: `test_reindex_command` (no MongoDB locally)
+
+---
+
+[0.3.0]: https://github.com/devboards/job-scraper/compare/v1.0.0...v0.3.0
 [1.0.0]: https://github.com/devboards/job-scraper/compare/v0...v1.0.0

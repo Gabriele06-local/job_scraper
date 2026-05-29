@@ -26,6 +26,10 @@ node_modules/
 *.swp
 *.swo
 
+# Coverage
+.coverage
+htmlcov/
+
 # Database
 *.db
 

@@ -104,6 +104,69 @@ def test_hn_hiring_fans_out_multi_role_comments() -> None:
     assert {j["external_id"] for j in jobs} == {"100-0", "100-1"}
 
 
+def test_hn_hiring_description_includes_comment_body() -> None:
+    """When the API returns a 'text' field, it should appear in description."""
+    payload = {
+        "items": [
+            {
+                "commentId": 200,
+                "text": "Senior backend engineer with experience in distributed systems.",
+                "commentUrl": "https://news.ycombinator.com/item?id=200",
+                "extracted": {
+                    "company": "Distributed Systems Inc",
+                    "locations": [],
+                    "jobs": [
+                        {
+                            "role": "Senior Backend Engineer",
+                            "keywords": ["python", "rust", "distributed-systems"],
+                        }
+                    ],
+                },
+            }
+        ],
+        "totalPages": 1,
+    }
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = _mock_response(payload)
+        c = HNHiringConnector()
+        c._scraper._api_key = "test-key"
+        jobs = list(c.fetch())
+    assert len(jobs) == 1
+    assert "senior backend engineer" in jobs[0]["description"].lower()
+    assert "distributed systems" in jobs[0]["description"]
+    assert "Keywords:" in jobs[0]["description"]
+
+
+def test_hn_hiring_description_fallback_when_no_body() -> None:
+    """Without a 'text' field, description falls back to keywords-only."""
+    payload = {
+        "items": [
+            {
+                "commentId": 201,
+                "commentUrl": "https://news.ycombinator.com/item?id=201",
+                "extracted": {
+                    "company": "AI Startup",
+                    "locations": [],
+                    "jobs": [
+                        {
+                            "role": "ML Engineer",
+                            "keywords": ["machine-learning", "python", "pytorch"],
+                        }
+                    ],
+                },
+            }
+        ],
+        "totalPages": 1,
+    }
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = _mock_response(payload)
+        c = HNHiringConnector()
+        c._scraper._api_key = "test-key"
+        jobs = list(c.fetch())
+    assert len(jobs) == 1
+    assert "Keywords: machine-learning, python, pytorch" in jobs[0]["description"]
+
+
 def test_hn_hiring_no_crash_on_http_error() -> None:
     with patch("requests.get") as mock_get:
         mock_get.side_effect = Exception("connection refused")
