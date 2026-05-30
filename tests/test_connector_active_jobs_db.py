@@ -5,7 +5,10 @@ from __future__ import annotations
 import itertools
 from unittest.mock import MagicMock, patch
 
+import mongomock
+
 from connectors.active_jobs_db import ActiveJobsDbConnector
+from pipeline.budget import MonthlyJobBudget
 
 
 def _mock_response(payload: object) -> MagicMock:
@@ -74,3 +77,39 @@ def test_active_jobs_db_skips_incomplete_item() -> None:
         c._scraper._api_key = "test-key"
         jobs = list(c.fetch())
     assert jobs == []
+
+
+def test_active_jobs_db_skips_fetch_when_budget_exhausted() -> None:
+    db = mongomock.MongoClient()["testdb"]
+    budget = MonthlyJobBudget(db, "active_jobs_db", limit=250)
+    budget.add(250)  # exhaust the month
+    with patch("requests.get") as mock_get:
+        c = ActiveJobsDbConnector()
+        c._scraper._api_key = "test-key"
+        c.set_budget(budget)
+        jobs = list(c.fetch())
+    assert jobs == []
+    mock_get.assert_not_called()
+
+
+def test_active_jobs_db_records_jobs_against_budget() -> None:
+    payload = [
+        {
+            "id": f"ajdb-{i}",
+            "title": "Backend Engineer",
+            "organization": "Acme",
+            "url": f"https://acme.example/jobs/{i}",
+            "description": "Python services.",
+        }
+        for i in range(3)
+    ]
+    db = mongomock.MongoClient()["testdb"]
+    budget = MonthlyJobBudget(db, "active_jobs_db", limit=250)
+    with patch("requests.get") as mock_get:
+        mock_get.side_effect = [_mock_response(payload), _mock_response([])] * 20
+        c = ActiveJobsDbConnector()
+        c._scraper._api_key = "test-key"
+        c.set_budget(budget)
+        list(c.fetch())
+    # Every job the API returned is charged against the monthly allowance.
+    assert budget.current() >= 3

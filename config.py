@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     themuse_api_key: str = ""
     rapidapi_key: str = ""
 
+    # RapidAPI jobs-metered plans (Fantastic.Jobs: active_jobs_db, workday_jobs,
+    # startup_jobs) bill per job returned. Cap jobs fetched per source per UTC
+    # month so a run can't blow the free-tier quota. 0 disables the cap.
+    rapidapi_monthly_job_budget: int = 250
+
     # Search config — override via comma-separated env vars
     scrape_languages: list[str] = ["it", "en", "es", "fr", "de"]
     scrape_keywords: list[str] = [

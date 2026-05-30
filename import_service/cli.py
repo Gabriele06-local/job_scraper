@@ -96,9 +96,12 @@ def cmd_import(args: argparse.Namespace) -> int:
     parent `import_reports` doc (SDD §A.6 / §I.2).
     """
     from connectors import get_enabled_connectors
+    from connectors.active_jobs_db import ActiveJobsDbConnector
     from connectors.adzuna import AdzunaConnector
+    from connectors.startup_jobs import StartupJobsConnector
+    from connectors.workday_jobs import WorkdayJobsConnector
     from database.repository import get_companies, get_db
-    from pipeline.budget import DailyBudget
+    from pipeline.budget import DailyBudget, MonthlyJobBudget
     from pipeline.import_run import ImportRunRecord, ImportRunTracker
     from pipeline.mojibake_migration import ensure_done as ensure_mojibake_done
     from pipeline.orchestrator import ImportPipeline
@@ -144,10 +147,23 @@ def cmd_import(args: argparse.Namespace) -> int:
         connectors = [c for c in connectors if c.source_name.lower() in only_names]
         log.info("cli.import.connector_filter", selected=sorted(only_names))
 
-    # Inject Adzuna daily budget now that DB is ready.
+    # Inject call/job budgets now that DB is ready. Adzuna meters daily calls;
+    # the Fantastic.Jobs RapidAPI sources meter jobs returned per month.
+    monthly_budget_slugs = {
+        ActiveJobsDbConnector: "active_jobs_db",
+        WorkdayJobsConnector: "workday_jobs",
+        StartupJobsConnector: "startup_jobs",
+    }
     for connector in connectors:
         if isinstance(connector, AdzunaConnector):
             connector.set_budget(DailyBudget(db, "adzuna"))
+            continue
+        for cls, slug in monthly_budget_slugs.items():
+            if isinstance(connector, cls):
+                connector.set_budget(
+                    MonthlyJobBudget(db, slug, limit=settings.rapidapi_monthly_job_budget)
+                )
+                break
 
     limit_per = getattr(args, "limit_per_connector", 0) or 0
     log.info(

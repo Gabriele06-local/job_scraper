@@ -8,9 +8,13 @@ from __future__ import annotations
 
 import time
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import requests
 import structlog
+
+if TYPE_CHECKING:
+    from pipeline.budget import MonthlyJobBudget
 
 log = structlog.get_logger(__name__)
 
@@ -64,7 +68,12 @@ class StartupJobsScraper:
     def __init__(self, api_key: str = "") -> None:
         self._api_key = api_key
 
-    def fetch(self) -> list[dict]:
+    def fetch(self, budget: MonthlyJobBudget | None = None) -> list[dict]:
+        """Paginate the endpoint per keyword, returning normalized RawJob dicts.
+
+        `budget` caps jobs fetched this month (RapidAPI bills per job returned);
+        fetching stops as soon as the monthly allowance is reached.
+        """
         if not self._api_key:
             log.warning("startup_jobs.no_api_key")
             return []
@@ -79,12 +88,12 @@ class StartupJobsScraper:
         from utils.retry import requests_retry
 
         @requests_retry
-        def _fetch_page(keyword: str, page: int) -> dict:
+        def _fetch_page(keyword: str, page: int, limit: int) -> dict:
             resp = requests.get(
                 _BASE_URL,
                 headers=headers,
                 params={
-                    "limit": _PAGE_SIZE,
+                    "limit": limit,
                     "offset": page * _PAGE_SIZE,
                     "title_filter": keyword,
                 },
@@ -95,13 +104,23 @@ class StartupJobsScraper:
 
         for keyword in _KEYWORDS:
             for page in range(_MAX_PAGES):
+                if budget is not None and budget.is_exhausted():
+                    log.info("startup_jobs.budget_exhausted", fetched=len(jobs))
+                    return jobs
+                page_size = _PAGE_SIZE
+                if budget is not None:
+                    page_size = min(_PAGE_SIZE, budget.remaining())
+                    if page_size <= 0:
+                        return jobs
                 try:
-                    payload = _fetch_page(keyword, page)
+                    payload = _fetch_page(keyword, page, page_size)
                     items = (
                         payload
                         if isinstance(payload, list)
                         else payload.get("data") or payload.get("jobs") or []
                     )
+                    if budget is not None and items:
+                        budget.add(len(items))
                     if not items:
                         break
                     for item in items:
