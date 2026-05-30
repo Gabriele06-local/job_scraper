@@ -25,6 +25,7 @@ from typing import Any, Callable
 
 import structlog
 
+from ai.cache import CacheBackend, default_cache
 from ai.provider import GroqProvider, LLMError, LLMProvider, LLMTransientError
 from ai.tasks import ESCALATION_HINT, TIER_ORDER, AITask, TaskConfig, Tier, TASK_CONFIG
 from ai.telemetry import AICallRecord, CostTracker, cost_tracker
@@ -67,9 +68,11 @@ class ModelRouter:
         self,
         provider: LLMProvider | None = None,
         tracker: CostTracker | None = None,
+        cache: CacheBackend | None = None,
     ) -> None:
         self._provider = provider or GroqProvider()
         self._tracker = tracker or cost_tracker
+        self._cache = cache if cache is not None else default_cache()
 
     # -- public ------------------------------------------------------------
 
@@ -81,9 +84,19 @@ class ModelRouter:
         parse: ParseFn,
         trace_id: str = "",
         allow_escalation: bool = True,
+        cache_key: str | None = None,
     ) -> RouterResult | None:
-        """Execute ``task``, escalating on low confidence. None on failure."""
+        """Execute ``task``, escalating on low confidence. None on failure.
+
+        When ``cache_key`` is supplied and the cache is enabled, an identical
+        prior result is returned with zero provider calls (SPEC 05 §4.5).
+        """
         cfg = TASK_CONFIG[task]
+
+        cached = self._cache_lookup(cache_key, task, parse, trace_id)
+        if cached is not None:
+            return cached
+
         tier = cfg.entry_tier
         escalated_from: str | None = None
         correction = ""
@@ -105,7 +118,7 @@ class ModelRouter:
             if outcome is None:
                 return None  # failures do not escalate
 
-            data, confidence = outcome
+            data, confidence, content = outcome
             if confidence < settings.ai_confidence_threshold and hops < max_hops:
                 nxt = self._next_tier(tier, cfg.ceiling_tier)
                 if nxt is not None and self._tier_enabled(nxt):
@@ -123,6 +136,16 @@ class ModelRouter:
                     hops += 1
                     continue
 
+            if cache_key is not None:
+                self._cache.put(
+                    cache_key,
+                    {
+                        "content": content,
+                        "model": model,
+                        "tier": tier.value,
+                        "confidence": confidence,
+                    },
+                )
             return RouterResult(
                 data=data,
                 confidence=confidence,
@@ -132,6 +155,44 @@ class ModelRouter:
             )
 
     # -- internals ---------------------------------------------------------
+
+    def _cache_lookup(
+        self,
+        cache_key: str | None,
+        task: AITask,
+        parse: ParseFn,
+        trace_id: str,
+    ) -> RouterResult | None:
+        """Return a cached result (re-validated) or None on miss/bad entry."""
+        if cache_key is None:
+            return None
+        entry = self._cache.get(cache_key)
+        if entry is None:
+            return None
+        try:
+            data, confidence = parse(entry["content"])
+        except (ParseError, KeyError):
+            return None  # stale/corrupt entry — treat as miss
+        self._tracker.record(
+            AICallRecord(
+                task=task.value,
+                tier=entry.get("tier", ""),
+                model=entry.get("model", ""),
+                tokens_in=0,
+                tokens_out=0,
+                latency_ms=0,
+                cache_hit=True,
+                confidence=confidence,
+                trace_id=trace_id,
+            )
+        )
+        return RouterResult(
+            data=data,
+            confidence=confidence,
+            model=entry.get("model", ""),
+            tier=entry.get("tier", ""),
+            escalated_from=None,
+        )
 
     def _model_for_tier(self, tier: Tier) -> str:
         if tier is Tier.FAST:
@@ -163,8 +224,11 @@ class ModelRouter:
         correction: str,
         trace_id: str,
         escalated_from: str | None,
-    ) -> tuple[Any, float] | None:
-        """One tier's call with 3 attempts (transient backoff + parse retry)."""
+    ) -> tuple[Any, float, str] | None:
+        """One tier's call with 3 attempts (transient backoff + parse retry).
+
+        Returns ``(parsed_data, confidence, raw_content)`` on success.
+        """
         current_correction = correction
         for attempt in range(1, _MAX_ATTEMPTS_PER_TIER + 1):
             system, user = build_prompt(tier, current_correction)
@@ -245,6 +309,6 @@ class ModelRouter:
                     trace_id=trace_id,
                 )
             )
-            return data, confidence
+            return data, confidence, resp.content
 
         return None

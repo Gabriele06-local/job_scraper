@@ -42,10 +42,11 @@ from ai.prompts import (
     build_extract_freeform,
     build_extract_structured,
 )
+from ai.cache import make_cache_key
 from ai.prompts import EXTRACT_SYSTEM as _SYSTEM_PROMPT
 from ai.provider import GroqProvider
 from ai.router import ModelRouter, ParseError
-from ai.tasks import AITask, Tier
+from ai.tasks import TASK_CONFIG, AITask, Tier
 from ai.telemetry import AICallRecord, cost_tracker
 from config import settings
 from models.job import (
@@ -219,15 +220,27 @@ class GroqClassifier:
             marks reject_reason=AI_CLASSIFICATION_FAILED per SDD §I.3).
         """
 
+        title = job_raw.get("title", "")
+        company_name = job_raw.get("company_name", "")
+        location_raw = job_raw.get("location_raw", "unknown")
+        detected_language = job_raw.get("detected_language", "unknown")
+        description = job_raw.get("description", "")
+
         def build_prompt(_tier: Tier, correction: str) -> tuple[str, str]:
             return _SYSTEM_PROMPT, build_extract_structured(
-                title=job_raw.get("title", ""),
-                company_name=job_raw.get("company_name", ""),
-                location_raw=job_raw.get("location_raw", "unknown"),
-                detected_language=job_raw.get("detected_language", "unknown"),
-                description=job_raw.get("description", ""),
+                title=title,
+                company_name=company_name,
+                location_raw=location_raw,
+                detected_language=detected_language,
+                description=description,
                 correction=correction,
             )
+
+        cfg = TASK_CONFIG[AITask.EXTRACT]
+        payload = "\x00".join(
+            [title, company_name, location_raw, detected_language, description]
+        )
+        cache_key = make_cache_key(AITask.EXTRACT.value, cfg.prompt_version, payload)
 
         result = self._router.run(
             task=AITask.EXTRACT,
@@ -235,6 +248,7 @@ class GroqClassifier:
             parse=_parse_extract,
             trace_id=job_raw.get("url", ""),
             allow_escalation=not _retry,
+            cache_key=cache_key,
         )
         if result is None:
             return None
