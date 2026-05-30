@@ -37,6 +37,12 @@ from tenacity import (
     wait_exponential,
 )
 
+from ai.prompts import (
+    FIELD_CONFIDENCE_KEYS,
+    build_extract_freeform,
+    build_extract_structured,
+)
+from ai.prompts import EXTRACT_SYSTEM as _SYSTEM_PROMPT
 from ai.provider import GroqProvider
 from ai.router import ModelRouter, ParseError
 from ai.tasks import AITask, Tier
@@ -59,165 +65,9 @@ logger = structlog.get_logger(__name__)
 __all__ = ["GroqClassifier", "cost_tracker"]
 
 
-# SPEC 02 §5 — strict schema sent in prompt + Pydantic guard (defense in depth)
-_CLASSIFICATION_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": [
-        "skills",
-        "category",
-        "seniority",
-        "role_family",
-        "employment_type",
-        "remote_mode",
-        "salary_min",
-        "salary_max",
-        "currency",
-        "languages_required",
-        "quality_flags",
-        "confidence",
-    ],
-    "properties": {
-        "skills": {"type": "array", "items": {"type": "string"}, "maxItems": 30},
-        "category": {
-            "type": ["string", "null"],
-            "enum": [
-                "software-engineering",
-                "devops-sysadmin",
-                "data-ml",
-                "design",
-                "product-management",
-                "engineering-management",
-                "security",
-                "qa-testing",
-                "mobile",
-                "other-it",
-                None,
-            ],
-        },
-        "seniority": {
-            "type": "string",
-            "enum": ["junior", "mid", "senior", "lead", "principal", "unknown"],
-        },
-        "role_family": {
-            "type": "string",
-            "enum": [
-                "frontend",
-                "backend",
-                "fullstack",
-                "devops",
-                "data",
-                "ml",
-                "mobile",
-                "qa",
-                "security",
-                "design",
-                "pm",
-                "other",
-            ],
-        },
-        "employment_type": {
-            "type": "string",
-            "enum": [
-                "full_time",
-                "part_time",
-                "contract",
-                "freelance",
-                "internship",
-                "unknown",
-            ],
-        },
-        "remote_mode": {
-            "type": "string",
-            "enum": ["onsite", "hybrid", "remote", "unknown"],
-        },
-        "salary_min": {"type": ["integer", "null"], "minimum": 0},
-        "salary_max": {"type": ["integer", "null"], "minimum": 0},
-        "currency": {"type": ["string", "null"]},
-        "languages_required": {"type": "array", "items": {"type": "string"}},
-        "quality_flags": {
-            "type": "array",
-            "items": {
-                "type": "string",
-                "enum": [
-                    "clear_jd",
-                    "has_responsibilities",
-                    "has_requirements",
-                    "has_benefits",
-                    "has_tech_stack",
-                    "vague",
-                    "boilerplate",
-                ],
-            },
-        },
-        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-        "cv_drop_score": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1,
-            "description": (
-                "How likely a qualified candidate submits their CV here "
-                "(0=poor, 1=compelling). Based on clarity, salary, benefits, "
-                "tech stack appeal, and posting completeness."
-            ),
-        },
-    },
-}
-
-# SPEC 02 §4 system prompt (constant — cache-friendly)
-_SYSTEM_PROMPT = (
-    "You are a strict job-listing classifier. You receive a job offer and return ONLY "
-    "a JSON object that conforms to the provided schema. No prose, no markdown, no "
-    'explanations. If a field is unknown, use the schema\'s "unknown" enum value or '
-    "null per the schema. Do not invent skills or salary numbers. Confidence is your "
-    "self-assessment of overall extraction reliability (0..1).\n\n"
-    "Seniority rules — use the TITLE as the primary signal, then the description:\n"
-    '- "senior" only when the title explicitly contains "Senior"/"Sr." or '
-    "the description requires 5+ years of experience\n"
-    '- "junior" when the title contains "Junior"/"Jr."/"Entry"/"Trainee" '
-    'or the posting says "no experience required"\n'
-    '- "mid" for roles with 1-4 years of experience and NO seniority keyword in the title\n'
-    '- "unknown" when no experience level or seniority keyword is mentioned at all;\n'
-    '  do NOT invent a seniority level — "unknown" is correct when the posting is silent\n\n'
-    "cv_drop_score (0..1): rate how likely a qualified candidate would submit their CV.\n"
-    "High scores need clear salary, benefits, tech stack, and a well-written description.\n"
-    "Low scores: vague/boilerplate text, no salary or benefits, poor formatting."
-)
-
-_SCHEMA_STR = json.dumps(_CLASSIFICATION_SCHEMA, separators=(",", ":"))
-
-
-def _build_user_prompt(text: str, correction: str = "") -> str:
-    """Build SPEC 02 §4 structured user prompt for plain-text input."""
-    truncated = text[:4000]
-    correction_block = f"\nIMPORTANT: {correction}\n" if correction else ""
-    return (
-        f"{correction_block}"
-        f"Job offer:\n{truncated}\n\n"
-        f"Return JSON conforming to schema:\n{_SCHEMA_STR}"
-    )
-
-
-def _build_structured_prompt(
-    title: str,
-    company_name: str,
-    location_raw: str,
-    detected_language: str,
-    description: str,
-    correction: str = "",
-) -> str:
-    """Build SPEC 02 §4 structured user prompt from individual fields."""
-    desc_truncated = description[:4000]
-    correction_block = f"\nIMPORTANT: {correction}\n" if correction else ""
-    return (
-        f"{correction_block}"
-        f"TITLE: {title}\n"
-        f"COMPANY: {company_name}\n"
-        f"LOCATION: {location_raw}\n"
-        f"DETECTED_LANGUAGE: {detected_language}\n"
-        f"DESCRIPTION (truncated to 4000 chars):\n{desc_truncated}\n\n"
-        f"Return JSON conforming to schema:\n{_SCHEMA_STR}"
-    )
+# Prompts + schema now live in the versioned registry (ai/prompts.py).
+# `_SYSTEM_PROMPT` is imported there and re-exported for back-compat (tests
+# import it from this module to guard against prompt drift).
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +94,20 @@ class _GroqOutput(BaseModel):
     quality_flags: list[str] = []
     cv_drop_score: float = 0.0
     confidence: float = 0.0
+    field_confidence: dict[str, float] | None = None
+
+    @field_validator("field_confidence", mode="before")
+    @classmethod
+    def coerce_field_confidence(cls, v: object) -> object:
+        """Keep only known keys with numeric values clamped to 0..1."""
+        if not isinstance(v, dict):
+            return None
+        out: dict[str, float] = {}
+        for key in FIELD_CONFIDENCE_KEYS:
+            val = v.get(key)
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                out[key] = max(0.0, min(1.0, float(val)))
+        return out or None
 
     @field_validator("category", mode="before")
     @classmethod
@@ -317,6 +181,7 @@ def _to_classification(parsed: _GroqOutput, model: str) -> JobClassification:
         quality_flags=parsed.quality_flags,
         cv_drop_score=parsed.cv_drop_score,
         ai_confidence=parsed.confidence,
+        field_confidence=parsed.field_confidence,
         ai_model=model,
         ai_call_at=datetime.now(tz=timezone.utc),
     )
@@ -355,7 +220,7 @@ class GroqClassifier:
         """
 
         def build_prompt(_tier: Tier, correction: str) -> tuple[str, str]:
-            return _SYSTEM_PROMPT, _build_structured_prompt(
+            return _SYSTEM_PROMPT, build_extract_structured(
                 title=job_raw.get("title", ""),
                 company_name=job_raw.get("company_name", ""),
                 location_raw=job_raw.get("location_raw", "unknown"),
@@ -396,7 +261,7 @@ class GroqClassifier:
         reraise=True,
     )
     def _call_with_retry(self, text: str) -> JobClassification:
-        return self._single_call(_build_user_prompt(text))
+        return self._single_call(build_extract_freeform(text))
 
     def _single_call(self, user_prompt: str) -> JobClassification:
         """Execute one raw Groq call (legacy path); raises on error."""
