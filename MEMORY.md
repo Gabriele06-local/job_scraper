@@ -1,7 +1,7 @@
 # MEMORY.md — DevBoards Import Service
 
 ## Last Updated
-2026-05-01T18:00Z
+2026-05-30T00:00Z — multi-model AI pipeline (SPEC 05) shipped to develop.
 
 ## Project Status
 STABLE — v1 implemented. All pipeline stages shipped (claude-03 through claude-09). 263 tests green. Operational docs complete. Migration script ready at `scripts/migrate.py`. Execute manually with `--confirm` AFTER:
@@ -155,6 +155,17 @@ Strict gate = desc≥200 AND skills≥1 AND has published_at AND has company.nam
 10. Q-10: **Strict gate threshold**: 826/2086 = 39.6% pass. Acceptable, or raise threshold?
 
 ## Decision Log
+
+### claude-05..12 — Multi-Model AI Pipeline (2026-05-30)
+
+See `docs/specs/05-multi-model-ai-pipeline.spec.md` + `docs/reports/05-multi-model-ai-summary.md`.
+
+- **D-05-1**: EXTRACT default tier = FAST (8b), escalate once to STRUCT (qwen-32b) on confidence < 0.7. **Alt**: 32b on every job per brief; +TRIAGE pre-screen. **Rationale**: cost goal dominates; 8b adequate for modal clean posting; escalation buys 32b accuracy only where needed. Owner-confirmed.
+- **D-05-2/3**: Embeddings deferred (provider-agnostic interface only); search relevance via lexical retrieve → 70b rerank, not vectors. **Rationale**: Groq has no embeddings + Mongo is self-hosted (no Atlas Vector Search). Owner-confirmed.
+- **D-05-5**: Split provider / router / prompts / cache / telemetry; provider is the only Groq touch-point, router the only place with model names. **Rationale**: provider-agnostic, reused in backend, isolates the SDK.
+- **D-05-7**: AI cache keyed by sha256(task|prompt_version|input) — model NOT in key — so re-imports reuse the final (post-escalation) result with zero calls.
+- Failures exhaust 3 within-tier retries and return None (no escalation) — escalation is only for successful-but-low-confidence results.
+- Legacy `classify_job` kept on the raw client (deprecated): its tests assert raw `groq.RateLimitError` propagation, which the provider's error translation would mask.
 
 ### claude-06 — Connectors Refactor (2026-05-01)
 
