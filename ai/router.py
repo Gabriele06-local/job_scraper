@@ -21,7 +21,7 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Tuple
 
 import structlog
 
@@ -45,9 +45,11 @@ class ParseError(Exception):
 
 
 # (system_prompt, user_prompt) for a given tier + correction string.
-BuildPrompt = Callable[[Tier, str], tuple[str, str]]
+# NOTE: runtime type aliases (evaluated at import) — must use typing.Tuple, not
+# the builtin tuple[...] which isn't subscriptable on the VPS's Python 3.8.
+BuildPrompt = Callable[[Tier, str], Tuple[str, str]]
 # raw content -> (parsed_data, confidence); raises ParseError on bad content.
-ParseFn = Callable[[str], tuple[Any, float]]
+ParseFn = Callable[[str], Tuple[Any, float]]
 
 
 @dataclass
