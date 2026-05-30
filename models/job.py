@@ -206,6 +206,9 @@ class JobClassification(BaseModel):
     salary_max: int | None = None
     currency: str | None = None
     ai_confidence: float = 0.0
+    # Per-field confidence (SPEC 05 §4.3): salary, remote_mode, seniority,
+    # company_quality, technologies — each 0..1. None for legacy rows.
+    field_confidence: dict[str, float] | None = None
     ai_model: str = ""
     ai_call_at: datetime | None = None
 
@@ -354,6 +357,7 @@ class Job(BaseModel):
             "quality_flags": cl.quality_flags,
             "cv_drop_score": cl.cv_drop_score,
             "ai_confidence": cl.ai_confidence,
+            "ai_field_confidence": cl.field_confidence,
             "ai_model": cl.ai_model,
             "ai_call_at": cl.ai_call_at,
             # Salary (flattened — prefer explicit JobSalary, fall back to classification)
@@ -476,6 +480,7 @@ class Job(BaseModel):
                 quality_flags=doc.get("quality_flags", []),
                 cv_drop_score=doc.get("cv_drop_score", 0.0),
                 ai_confidence=doc.get("ai_confidence", 0.0),
+                field_confidence=doc.get("ai_field_confidence"),
                 ai_model=doc.get("ai_model", ""),
                 ai_call_at=doc.get("ai_call_at"),
             ),
