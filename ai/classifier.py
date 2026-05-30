@@ -1,47 +1,28 @@
-"""Groq client wrapper for single-call job classification.
+"""Groq job classifier — primary path routes through the model router.
 
-Retry semantics (three nested layers — keep them in mind when debugging):
+SPEC 05 refactor: the primary ``classify(job_raw)`` path now delegates the call
+control flow (within-tier retry + cross-tier confidence escalation) to
+``ai/router.ModelRouter`` over the provider-agnostic ``ai/provider`` seam. This
+file keeps only the EXTRACT *schema*, prompts, and the mapping from raw Groq
+JSON → :class:`JobClassification`.
 
-1. **API-level retry** (`classify` loop): 3 attempts with exponential backoff +
-   jitter on `RateLimitError`, `APITimeoutError`, `InternalServerError`. JSON
-   parse / Pydantic validation errors trigger a corrective-hint re-prompt
-   (the next attempt prepends "Your previous response was invalid. Error: ...").
+Escalation replaces the old same-model confidence retry: a first FAST
+(``llama-3.1-8b-instant``) call that returns ``confidence < AI_CONFIDENCE_THRESHOLD``
+escalates once to STRUCT (``qwen/qwen3-32b``) with a "don't invent" hint
+(D-05-1). The downstream ``quality_gate`` remains the authority on rejection.
 
-2. **Confidence-level retry** (SDD §A.7): when the first successful call
-   returns `ai_confidence < _DEFAULT_CONFIDENCE_THRESHOLD` and we have not
-   already retried, we issue a second call with a `retry_with_hints` variant
-   that explicitly tells the model:
+Legacy ``classify_job(text)`` is retained verbatim on the raw Groq client
+(deprecated): its tests assert the raw ``groq.RateLimitError`` propagates, so it
+intentionally bypasses the provider's exception translation. Slated for removal
+once the legacy ``main.py`` entrypoint is retired.
 
-       "If a field is genuinely unknowable from the text, return the literal
-        string 'unknown'. Do not invent values to raise confidence."
-
-   The retried result is returned even when its confidence is still low — the
-   downstream `quality_gate` is the authority on rejection (`<0.7` reject,
-   `>=0.85` premium-eligible).
-
-3. **Tenacity decorator** (`_call_with_retry`): legacy free-form interface
-   used by `classify_job(text)`. Same API-retry policy as (1).
-
-Prompt structure (SPEC 02 §4):
-  * System prompt is constant and cache-friendly — DO NOT mutate it per
-    request, otherwise Groq's prompt cache won't kick in.
-  * User prompt has two variants:
-      `_build_structured_prompt` — preferred; fields (title/company/location/
-          language/description) carried in named blocks so the model can't
-          confuse them.
-      `_build_user_prompt` — legacy free-form; kept for `classify_job(text)`.
-  * Description is hard-capped at 4000 chars to keep token spend predictable.
-
-Rate limit: client-side token bucket (`GROQ_RPM` env, default 50 req/min).
-Logging: tokens in/out + latency per call (`groq.call`); cumulative cost
-emitted at run end (`pipeline.run_complete`).
+Prompt rules (SPEC 02 §4): the system prompt is constant (cache-friendly — do
+NOT mutate per request); the description is hard-capped at 4000 chars.
 """
 
 from __future__ import annotations
 
 import json
-import random
-import threading
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -56,6 +37,10 @@ from tenacity import (
     wait_exponential,
 )
 
+from ai.provider import GroqProvider
+from ai.router import ModelRouter, ParseError
+from ai.tasks import AITask, Tier
+from ai.telemetry import AICallRecord, cost_tracker
 from config import settings
 from models.job import (
     Category,
@@ -69,19 +54,10 @@ from utils.skills_lexicon import split_skills
 
 logger = structlog.get_logger(__name__)
 
-# Groq llama-3.1-8b-instant pricing (USD per 1M tokens, 2025 rates)
-_INPUT_PRICE_PER_1M: float = 0.05
-_OUTPUT_PRICE_PER_1M: float = 0.08
+# Re-exported so `from ai.classifier import cost_tracker` keeps working
+# (pipeline/orchestrator.py, scripts/run_ai_baseline.py).
+__all__ = ["GroqClassifier", "cost_tracker"]
 
-# SDD §A.7 — retry-on-low-confidence threshold (mirrors quality_gate default).
-_DEFAULT_CONFIDENCE_THRESHOLD: float = 0.7
-
-# Hint appended on the confidence-retry call.
-_RETRY_HINT: str = (
-    "If a field is genuinely unknowable from the text, return the literal "
-    "string 'unknown' (or null where the schema allows). Do not invent values "
-    "to raise confidence."
-)
 
 # SPEC 02 §5 — strict schema sent in prompt + Pydantic guard (defense in depth)
 _CLASSIFICATION_SCHEMA: dict[str, Any] = {
@@ -307,60 +283,43 @@ class _GroqOutput(BaseModel):
         return v
 
 
-# ---------------------------------------------------------------------------
-# Rate limiter
-# ---------------------------------------------------------------------------
+def _parse_extract(content: str) -> tuple[_GroqOutput, float]:
+    """Parse + validate raw EXTRACT content; raises ParseError on bad output."""
+    try:
+        raw_dict = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise ParseError(str(exc)) from exc
+    # Some model invocations wrap the JSON object in a list — unwrap gracefully.
+    if isinstance(raw_dict, list) and len(raw_dict) == 1 and isinstance(raw_dict[0], dict):
+        raw_dict = raw_dict[0]
+    try:
+        parsed = _GroqOutput.model_validate(raw_dict)
+    except ValidationError as exc:
+        raise ParseError(str(exc)) from exc
+    return parsed, parsed.confidence
 
 
-class _RateLimiter:
-    """Client-side token bucket — enforces GROQ_RPM."""
-
-    def __init__(self, rpm: int) -> None:
-        self._min_interval = 60.0 / max(rpm, 1)
-        self._last_call: float = 0.0
-        self._lock = threading.Lock()
-
-    def acquire(self) -> None:
-        with self._lock:
-            now = time.monotonic()
-            wait = self._min_interval - (now - self._last_call)
-            if wait > 0:
-                time.sleep(wait)
-            self._last_call = time.monotonic()
-
-
-# ---------------------------------------------------------------------------
-# Cost tracker (cumulative per process)
-# ---------------------------------------------------------------------------
-
-
-class _CostTracker:
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self.tokens_in: int = 0
-        self.tokens_out: int = 0
-
-    def record(self, tokens_in: int, tokens_out: int) -> None:
-        with self._lock:
-            self.tokens_in += tokens_in
-            self.tokens_out += tokens_out
-
-    @property
-    def cost_usd(self) -> float:
-        return (
-            self.tokens_in * _INPUT_PRICE_PER_1M / 1_000_000
-            + self.tokens_out * _OUTPUT_PRICE_PER_1M / 1_000_000
-        )
-
-    def summary(self) -> dict[str, Any]:
-        return {
-            "groq_tokens_in": self.tokens_in,
-            "groq_tokens_out": self.tokens_out,
-            "groq_cost_usd": round(self.cost_usd, 6),
-        }
-
-
-cost_tracker = _CostTracker()
+def _to_classification(parsed: _GroqOutput, model: str) -> JobClassification:
+    """Map validated Groq output to the pipeline's JobClassification."""
+    tech, non_tech = split_skills(parsed.skills)
+    return JobClassification(
+        technical_skills=tech,
+        skills=non_tech,
+        category=parsed.category,
+        role_family=parsed.role_family,
+        seniority=parsed.seniority,
+        employment_type=parsed.employment_type,
+        remote_mode=parsed.remote_mode,
+        salary_min=parsed.salary_min,
+        salary_max=parsed.salary_max,
+        currency=parsed.currency,
+        languages_required=parsed.languages_required,
+        quality_flags=parsed.quality_flags,
+        cv_drop_score=parsed.cv_drop_score,
+        ai_confidence=parsed.confidence,
+        ai_model=model,
+        ai_call_at=datetime.now(tz=timezone.utc),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -369,100 +328,57 @@ cost_tracker = _CostTracker()
 
 
 class GroqClassifier:
-    """Single-call Groq classifier with retry, rate limiting, and structured logging."""
+    """Job classifier over the model router (primary) + legacy text path."""
 
     def __init__(self, client: groq.Groq | None = None) -> None:
+        # The raw client is shared with the provider so the legacy classify_job
+        # path and the routed path hit the same (mockable) Groq client.
         self._client = client or groq.Groq(api_key=settings.groq_api_key)
-        self._rate_limiter = _RateLimiter(settings.groq_rpm)
+        self._provider = GroqProvider(client=self._client)
+        self._router = ModelRouter(provider=self._provider)
+        # Tests mutate `clf._rate_limiter._min_interval`; expose the provider's.
+        self._rate_limiter = self._provider._rate_limiter
 
     def classify(
         self, job_raw: dict[str, Any], *, _retry: bool = False
     ) -> JobClassification | None:
-        """Classify a job from raw dict (SPEC 02 §4 structured prompt + SDD §A.7).
-
-        Performs one full classification call. If the returned confidence is
-        below `_DEFAULT_CONFIDENCE_THRESHOLD` and we haven't retried yet, issues
-        a second call with the `retry_with_hints` variant (see module docstring).
+        """Classify a job (SPEC 05 EXTRACT task, FAST→STRUCT escalation).
 
         Args:
             job_raw: Dict with keys title, company_name, location_raw,
-                     detected_language, description. `url` is used for logging.
-            _retry: Internal flag — set True on the recursive retry call to
-                    prevent infinite recursion.
+                     detected_language, description; `url` is used as trace id.
+            _retry: When True, disables escalation (single tier only).
 
         Returns:
             JobClassification on success, None on persistent failure (caller
             marks reject_reason=AI_CLASSIFICATION_FAILED per SDD §I.3).
         """
-        result = self._call_groq(job_raw, hint="")
+
+        def build_prompt(_tier: Tier, correction: str) -> tuple[str, str]:
+            return _SYSTEM_PROMPT, _build_structured_prompt(
+                title=job_raw.get("title", ""),
+                company_name=job_raw.get("company_name", ""),
+                location_raw=job_raw.get("location_raw", "unknown"),
+                detected_language=job_raw.get("detected_language", "unknown"),
+                description=job_raw.get("description", ""),
+                correction=correction,
+            )
+
+        result = self._router.run(
+            task=AITask.EXTRACT,
+            build_prompt=build_prompt,
+            parse=_parse_extract,
+            trace_id=job_raw.get("url", ""),
+            allow_escalation=not _retry,
+        )
         if result is None:
             return None
-        if not _retry and result.ai_confidence < _DEFAULT_CONFIDENCE_THRESHOLD:
-            logger.info(
-                "groq.confidence_retry",
-                first_confidence=round(result.ai_confidence, 2),
-                threshold=_DEFAULT_CONFIDENCE_THRESHOLD,
-                url=job_raw.get("url", ""),
-            )
-            retried = self._call_groq(job_raw, hint=_RETRY_HINT)
-            if retried is not None:
-                return retried
-        return result
+        return _to_classification(result.data, result.model)
 
-    def _call_groq(self, job_raw: dict[str, Any], *, hint: str = "") -> JobClassification | None:
-        """Single classification round-trip with 3 API-level retries.
-
-        On `RateLimitError`/`APITimeoutError`/`InternalServerError` we backoff and
-        retry; on JSON / Pydantic validation errors we re-prompt with a
-        corrective hint. After 3 failed attempts returns None.
-        """
-        correction = hint
-        for attempt in range(1, 4):
-            try:
-                prompt = _build_structured_prompt(
-                    title=job_raw.get("title", ""),
-                    company_name=job_raw.get("company_name", ""),
-                    location_raw=job_raw.get("location_raw", "unknown"),
-                    detected_language=job_raw.get("detected_language", "unknown"),
-                    description=job_raw.get("description", ""),
-                    correction=correction,
-                )
-                return self._single_call(prompt)
-            except (groq.RateLimitError, groq.APITimeoutError, groq.InternalServerError) as exc:
-                wait = min(2**attempt, 30) + random.random()
-                logger.warning(
-                    "groq.api_retry",
-                    attempt=attempt,
-                    error=str(exc)[:120],
-                    wait_s=round(wait, 1),
-                    url=job_raw.get("url", ""),
-                )
-                if attempt < 3:
-                    time.sleep(wait)
-                else:
-                    logger.error("groq.exhausted_api", url=job_raw.get("url", ""))
-                    return None
-            except (json.JSONDecodeError, ValidationError) as exc:
-                correction = f"Your previous response was invalid. Error: {str(exc)[:200]}"
-                logger.warning(
-                    "groq.validation_retry",
-                    attempt=attempt,
-                    error=str(exc)[:120],
-                    url=job_raw.get("url", ""),
-                )
-                if attempt == 3:
-                    logger.error("groq.exhausted_validation", url=job_raw.get("url", ""))
-                    return None
-        return None
+    # -- legacy free-form path (deprecated) --------------------------------
 
     def classify_job(self, text: str) -> JobClassification:
         """Classify a job offer from free-form text (legacy interface).
-
-        Args:
-            text: Combined title + description (caller builds the string).
-
-        Returns:
-            JobClassification with fields populated from Groq response.
 
         Raises:
             groq.RateLimitError | groq.APITimeoutError | groq.InternalServerError:
@@ -483,7 +399,7 @@ class GroqClassifier:
         return self._single_call(_build_user_prompt(text))
 
     def _single_call(self, user_prompt: str) -> JobClassification:
-        """Execute one Groq API call; raises on error (no retry here)."""
+        """Execute one raw Groq call (legacy path); raises on error."""
         self._rate_limiter.acquire()
 
         t0 = time.monotonic()
@@ -500,59 +416,21 @@ class GroqClassifier:
         )
         latency_ms = round((time.monotonic() - t0) * 1000)
 
-        # Extract token usage (None-safe for test mocks)
         usage = getattr(response, "usage", None)
         tokens_in = int(getattr(usage, "prompt_tokens", 0) or 0)
         tokens_out = int(getattr(usage, "completion_tokens", 0) or 0)
 
-        cost_tracker.record(tokens_in, tokens_out)
-
-        logger.info(
-            "groq.call",
-            model=settings.groq_model,
-            tokens_in=tokens_in,
-            tokens_out=tokens_out,
-            latency_ms=latency_ms,
-            cost_usd=round(
-                tokens_in * _INPUT_PRICE_PER_1M / 1_000_000
-                + tokens_out * _OUTPUT_PRICE_PER_1M / 1_000_000,
-                6,
-            ),
-        )
-
         raw_content = response.choices[0].message.content
-        try:
-            raw_dict = json.loads(raw_content)
-        except json.JSONDecodeError as e:
-            logger.warning("groq.json_parse_error", error=str(e), content=raw_content[:200])
-            raise
+        parsed, _confidence = _parse_extract(raw_content)
 
-        # Some model invocations wrap the JSON object in a list — unwrap gracefully
-        if isinstance(raw_dict, list) and len(raw_dict) == 1 and isinstance(raw_dict[0], dict):
-            raw_dict = raw_dict[0]
-
-        try:
-            parsed = _GroqOutput.model_validate(raw_dict)
-        except ValidationError as e:
-            logger.warning("groq.validation_error", error=str(e))
-            raise
-
-        tech, non_tech = split_skills(parsed.skills)
-        return JobClassification(
-            technical_skills=tech,
-            skills=non_tech,
-            category=parsed.category,
-            role_family=parsed.role_family,
-            seniority=parsed.seniority,
-            employment_type=parsed.employment_type,
-            remote_mode=parsed.remote_mode,
-            salary_min=parsed.salary_min,
-            salary_max=parsed.salary_max,
-            currency=parsed.currency,
-            languages_required=parsed.languages_required,
-            quality_flags=parsed.quality_flags,
-            cv_drop_score=parsed.cv_drop_score,
-            ai_confidence=parsed.confidence,
-            ai_model=settings.groq_model,
-            ai_call_at=datetime.now(tz=timezone.utc),
+        cost_tracker.record(
+            AICallRecord(
+                task=AITask.EXTRACT.value,
+                tier=Tier.FAST.value,
+                model=settings.groq_model,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                latency_ms=latency_ms,
+            )
         )
+        return _to_classification(parsed, settings.groq_model)
