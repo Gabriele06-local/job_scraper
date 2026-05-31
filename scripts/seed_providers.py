@@ -100,12 +100,12 @@ _SEED: list[ProviderSeed] = [
         "Free public API, remote-only jobs.",
     ),
     ProviderSeed(
-        "rss", "RSS feeds", "free", "rss", "EN",
+        "rss", "RSS", "free", "rss", "EN",
         "",
         "Generic RSS aggregator across multiple configured feeds.",
     ),
     ProviderSeed(
-        "iprogrammatori", "iProgrammatori", "free", "rss", "IT",
+        "iprogrammatori", "IProgrammatori", "free", "rss", "IT",
         "https://www.iprogrammatori.it/",
         "Free IT-focused RSS/HTML feed.",
     ),
@@ -132,28 +132,28 @@ _SEED: list[ProviderSeed] = [
     ),
     # --- free, RapidAPI key required (no billing on free tier) ---
     ProviderSeed(
-        "hn_hiring", "Hacker News Who Is Hiring (RapidAPI)", "free",
+        "hn_hiring", "HN Who is Hiring", "free",
         "aggregator", "Worldwide",
         "https://rapidapi.com/odosui/api/hacker-news-who-is-hiring-api/",
         "Monthly HN 'Who is Hiring' thread. Free tier, high senior-dev signal.",
         auth_env_vars=["RAPIDAPI_KEY"],
     ),
     ProviderSeed(
-        "yc_jobs", "Y Combinator Jobs (RapidAPI)", "free",
+        "yc_jobs", "Y Combinator Jobs", "free",
         "aggregator", "Worldwide",
         "https://rapidapi.com/fantastic-jobs-fantastic-jobs-default/api/free-y-combinator-jobs-api/",
         "YC-backed companies only. Free tier, refreshed twice daily.",
         auth_env_vars=["RAPIDAPI_KEY"],
     ),
     ProviderSeed(
-        "faang_watch", "faang.watch (RapidAPI)", "free",
+        "faang_watch", "faang.watch", "free",
         "aggregator", "Worldwide",
         "https://rapidapi.com/local-transformer/api/faang-watch-api/",
         "FAANG career pages unified (Google, Meta, Apple, Amazon, Netflix). Free tier.",
         auth_env_vars=["RAPIDAPI_KEY"],
     ),
     ProviderSeed(
-        "hn_realtime", "Hacker News Real-Time Jobs (RapidAPI)", "free",
+        "hn_realtime", "HN Real-Time Jobs", "free",
         "aggregator", "Worldwide",
         "https://rapidapi.com/syed-abdulla/api/hacker-news-real-time-jobs-startup-hiring-api/",
         "Real-time HN job postings with company/location extraction. Free tier.",
@@ -180,13 +180,13 @@ _SEED: list[ProviderSeed] = [
         auth_env_vars=["REED_API_KEY"],
     ),
     ProviderSeed(
-        "themuse", "The Muse", "freemium", "api", "US/Global",
+        "themuse", "TheMuse", "freemium", "api", "US/Global",
         "https://www.themuse.com/developers/api/v2",
         "Free account key; rate-limited free tier.",
         auth_env_vars=["THEMUSE_API_KEY"],
     ),
     ProviderSeed(
-        "jsearch", "JSearch (RapidAPI)", "freemium", "aggregator", "Worldwide",
+        "jsearch", "JSearch", "freemium", "aggregator", "Worldwide",
         "https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch/",
         "Aggregates Indeed, LinkedIn, Glassdoor, ZipRecruiter, Monster. "
         "Free tier limited; paid plan to scale.",
@@ -194,7 +194,7 @@ _SEED: list[ProviderSeed] = [
     ),
     # --- metered: billed per job returned (Fantastic.Jobs) — budget-capped ---
     ProviderSeed(
-        "active_jobs_db", "Active Jobs DB (RapidAPI)", "metered",
+        "active_jobs_db", "Active Jobs DB", "metered",
         "aggregator", "Worldwide",
         "https://rapidapi.com/fantastic-jobs-fantastic-jobs-default/api/active-jobs-db/",
         "200k+ career sites & ATS, AI-enriched. Billed per job — capped by "
@@ -203,7 +203,7 @@ _SEED: list[ProviderSeed] = [
         auth_env_vars=["RAPIDAPI_KEY"],
     ),
     ProviderSeed(
-        "workday_jobs", "Workday Jobs (RapidAPI)", "metered",
+        "workday_jobs", "Workday Jobs", "metered",
         "aggregator", "Worldwide",
         "https://rapidapi.com/fantastic-jobs-fantastic-jobs-default/api/workday-jobs-api/",
         "4k+ Workday career sites, enterprise-heavy. Billed per job — "
@@ -212,7 +212,7 @@ _SEED: list[ProviderSeed] = [
         auth_env_vars=["RAPIDAPI_KEY"],
     ),
     ProviderSeed(
-        "startup_jobs", "Startup Jobs (RapidAPI)", "metered",
+        "startup_jobs", "Startup Jobs", "metered",
         "aggregator", "Worldwide",
         "https://rapidapi.com/fantastic-jobs-fantastic-jobs-default/api/startup-jobs-api/",
         "Wellfound (AngelList), YC, LinkedIn, AshbyHQ. Billed per job — "

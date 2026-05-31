@@ -122,7 +122,12 @@ def get_enabled_connectors() -> list[BaseConnector]:
             )
             continue
         try:
-            result.append(entry.cls())
+            instance = entry.cls()
+            # REGISTRY key is the canonical slug — stamp it on the instance so
+            # telemetry (import_runs.provider_slug) and the providers catalog
+            # share one identifier.
+            instance.slug = name
+            result.append(instance)
         except Exception as exc:
             log.warning("connector.init_failed", name=name, error=str(exc))
 

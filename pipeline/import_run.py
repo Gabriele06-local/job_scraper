@@ -54,10 +54,13 @@ class ImportRunRecord:
     crash_reason: str | None = None
     soft_404_count: int = 0
     url_invalid_count: int = 0
+    # Canonical join key (REGISTRY slug); provider_name stays the display label.
+    provider_slug: str | None = None
 
     def to_doc(self) -> dict:
         return {
             "provider_name": self.provider_name,
+            "provider_slug": self.provider_slug,
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "jobs_fetched": self.jobs_fetched,
