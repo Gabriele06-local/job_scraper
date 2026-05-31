@@ -214,6 +214,7 @@ def cmd_import(args: argparse.Namespace) -> int:
             )
             record = ImportRunRecord(
                 provider_name=name,
+                provider_slug=getattr(connector, "slug", "") or None,
                 started_at=started_at,
                 completed_at=datetime.now(tz=timezone.utc),
                 jobs_fetched=fetched,
