@@ -27,6 +27,26 @@ from utils.text_fixer import fix_mojibake
 log = structlog.get_logger(__name__)
 
 
+def _classify_failure(exc: BaseException) -> str:
+    """Bucket a connector exception into a coarse failure reason for reports.
+
+    Surfaces rate-limit (HTTP 429) exhaustion explicitly so the failures report
+    reflects providers that hit their free-tier quota instead of showing empty.
+    """
+    text = f"{type(exc).__name__} {exc}".lower()
+    if "429" in text or "rate limit" in text or "ratelimit" in text or "too many requests" in text:
+        return "RATE_LIMIT_429"
+    if "timeout" in text or "timed out" in text:
+        return "TIMEOUT"
+    if "401" in text or "403" in text or "unauthorized" in text or "forbidden" in text:
+        return "AUTH_ERROR"
+    if "404" in text or "not found" in text:
+        return "NOT_FOUND"
+    if "connection" in text or "network" in text or "dns" in text:
+        return "NETWORK_ERROR"
+    return "CONNECTOR_CRASH"
+
+
 # ---------------------------------------------------------------------------
 # Normalizer: connector dict → RawJob
 # ---------------------------------------------------------------------------
@@ -187,6 +207,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         error_msg: str | None = None
         connector_crashed = False
         crash_reason: str | None = None
+        failure_reasons: dict[str, int] = {}
         log.info("connector.fetch_start", connector=name)
         try:
             for raw_dict in connector.fetch():
@@ -204,7 +225,14 @@ def cmd_import(args: argparse.Namespace) -> int:
             connector_crashed = True
             error_msg = str(exc)
             crash_reason = repr(exc)[:500]
-            log.error("cli.import.connector_error", connector=name, error=exc)
+            reason = _classify_failure(exc)
+            failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+            log.error(
+                "cli.import.connector_error",
+                connector=name,
+                reason=reason,
+                error=exc,
+            )
         finally:
             log.info(
                 "connector.fetch_done",
@@ -224,6 +252,10 @@ def cmd_import(args: argparse.Namespace) -> int:
                 report_id=report_id,
                 connector_crashed=connector_crashed,
                 crash_reason=crash_reason,
+                # Per SDD §I.2: target languages for this import (was unset →
+                # the dashboard "Lingua" column rendered empty for every run).
+                language_target=",".join(settings.scrape_languages),
+                failure_reasons=failure_reasons,
             )
             pending_records.append(record)
             # Continue to next connector regardless of crash status.
