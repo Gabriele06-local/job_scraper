@@ -37,13 +37,13 @@ from tenacity import (
     wait_exponential,
 )
 
+from ai.cache import make_cache_key
+from ai.prompts import EXTRACT_SYSTEM as _SYSTEM_PROMPT
 from ai.prompts import (
     FIELD_CONFIDENCE_KEYS,
     build_extract_freeform,
     build_extract_structured,
 )
-from ai.cache import make_cache_key
-from ai.prompts import EXTRACT_SYSTEM as _SYSTEM_PROMPT
 from ai.provider import GroqProvider
 from ai.router import ModelRouter, ParseError
 from ai.tasks import TASK_CONFIG, AITask, Tier
@@ -225,6 +225,7 @@ class GroqClassifier:
         location_raw = job_raw.get("location_raw", "unknown")
         detected_language = job_raw.get("detected_language", "unknown")
         description = job_raw.get("description", "")
+        source_hints = job_raw.get("source_hints") or None
 
         def build_prompt(_tier: Tier, correction: str) -> tuple[str, str]:
             return _SYSTEM_PROMPT, build_extract_structured(
@@ -234,11 +235,19 @@ class GroqClassifier:
                 detected_language=detected_language,
                 description=description,
                 correction=correction,
+                source_hints=source_hints,
             )
 
         cfg = TASK_CONFIG[AITask.EXTRACT]
+        # Hints are part of the prompt, so they must key the cache too (otherwise
+        # the same description with different hints would collide).
+        hints_payload = (
+            "|".join(f"{k}={v}" for k, v in sorted(source_hints.items()))
+            if source_hints
+            else ""
+        )
         payload = "\x00".join(
-            [title, company_name, location_raw, detected_language, description]
+            [title, company_name, location_raw, detected_language, description, hints_payload]
         )
         cache_key = make_cache_key(AITask.EXTRACT.value, cfg.prompt_version, payload)
 

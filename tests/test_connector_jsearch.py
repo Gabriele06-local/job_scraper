@@ -76,3 +76,50 @@ def test_jsearch_no_crash_on_http_error() -> None:
         c = JSearchConnector()
         jobs = list(c.fetch())
     assert jobs == []
+
+
+def test_jsearch_source_hints_mapped() -> None:
+    """Structured /search fields become authoritative AI hints (token saving)."""
+    from scrapers.jsearch_scraper import JSearchScraper
+
+    item = {
+        "job_title": "Senior Backend Engineer",
+        "employer_name": "Acme Corp",
+        "job_apply_link": "https://example.com/jobs/abc123",
+        "job_description": "Build scalable distributed systems in Python.",
+        "job_city": "Austin",
+        "job_country": "US",
+        "job_employment_type": "FULLTIME",
+        "job_is_remote": True,
+        "job_required_experience": {
+            "no_experience_required": False,
+            "required_experience_in_months": 72,
+        },
+        "job_required_skills": ["Python", "Go", "  "],
+        "job_id": "abc123",
+    }
+    normalized = JSearchScraper(api_key="k")._normalize(item)
+    assert normalized is not None
+    assert normalized["source_hints"] == {
+        "employment_type": "full_time",
+        "remote_mode": "remote",
+        "seniority": "senior",
+        "skills": "Python, Go",
+    }
+
+
+def test_jsearch_source_hints_absent_when_no_signal() -> None:
+    """Ambiguous/missing fields yield no hints (None), leaving them to the AI."""
+    from scrapers.jsearch_scraper import JSearchScraper
+
+    item = {
+        "job_title": "Backend Engineer",
+        "employer_name": "Acme Corp",
+        "job_apply_link": "https://example.com/jobs/x",
+        "job_description": "desc",
+        "job_is_remote": False,  # may still be hybrid → stay silent
+        "job_id": "x",
+    }
+    normalized = JSearchScraper(api_key="k")._normalize(item)
+    assert normalized is not None
+    assert normalized["source_hints"] is None

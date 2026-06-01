@@ -78,6 +78,7 @@ def _dict_to_raw_job(d: dict) -> RawJob | None:  # type: ignore[type-arg]
         currency=d.get("currency"),
         original_language=d.get("language") or d.get("original_language"),
         external_id=d.get("external_id") or d.get("id"),
+        source_hints=d.get("source_hints") or None,
     )
 
 
