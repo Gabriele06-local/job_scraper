@@ -283,6 +283,7 @@ def cmd_import(args: argparse.Namespace) -> int:
     # We can't fully break down counters per connector without re-running,
     # so we attribute URL-invalid + quality stats proportionally via the
     # `per_source_raw` mapping where possible.
+    jobs_col = get_jobs() if not args.dry_run else None
     for record in pending_records:
         connector_raw = per_source_raw.get(record.provider_name, [])
         connector_urls = {r.url for r in connector_raw}
@@ -295,6 +296,29 @@ def cmd_import(args: argparse.Namespace) -> int:
         # the aggregates as-fetched. Detailed per-source counters require a
         # follow-up SDD ticket.
         record.jobs_stored = len(connector_raw) if not args.dry_run else 0
+
+        # Per-provider quality: average quality_score of THIS run's persisted
+        # jobs (looked up by their URLs). Previously unset → the dashboard
+        # "Quality Medio" column was always 0. Read-only and wrapped so a query
+        # failure can never abort the import; stays 0 when nothing is graded.
+        if jobs_col is not None and connector_urls:
+            try:
+                graded = [
+                    int(d.get("quality_score") or 0)
+                    for d in jobs_col.find(
+                        {"url": {"$in": list(connector_urls)}, "quality_score": {"$gt": 0}},
+                        {"quality_score": 1},
+                    )
+                ]
+                if graded:
+                    record.quality_score = round(sum(graded) / len(graded), 2)
+                    record.passed_quality_gate = len(graded)
+            except Exception as exc:  # noqa: BLE001 — best-effort read aggregate
+                log.warning(
+                    "cli.import.quality_aggregation_failed",
+                    provider=record.provider_name,
+                    error=str(exc),
+                )
 
     # Save per-source records (and roll them up into the parent report).
     if not args.dry_run:
