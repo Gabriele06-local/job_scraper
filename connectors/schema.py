@@ -27,6 +27,9 @@ class CanonicalJob(TypedDict, total=False):
     currency: NotRequired[str | None]
     external_id: NotRequired[str | None]
     original_language: NotRequired[str | None]
+    # Structured fields the source already provides (employment_type, remote_mode,
+    # seniority, skills, …), used as authoritative AI hints to cut token cost.
+    source_hints: NotRequired[dict[str, str] | None]
 
 
 REQUIRED_KEYS: frozenset[str] = frozenset(

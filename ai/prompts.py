@@ -169,6 +169,25 @@ EXTRACT_SYSTEM = (
 _EXTRACT_SCHEMA_STR = json.dumps(EXTRACT_SCHEMA, separators=(",", ":"))
 
 
+def _render_source_hints(source_hints: dict[str, str] | None) -> str:
+    """Render source-provided structured fields as an authoritative hint block.
+
+    Some boards (e.g. JSearch) already return structured employment_type /
+    remote_mode / seniority / skills. Surfacing them lets the FAST tier answer
+    with high confidence instead of escalating to the costlier STRUCT tier,
+    saving AI tokens. Kept in the *user* prompt only so the cache-friendly
+    system prompt stays constant. Returns "" when there are no hints.
+    """
+    if not source_hints:
+        return ""
+    lines = "".join(f"- {key}: {value}\n" for key, value in sorted(source_hints.items()))
+    return (
+        "SOURCE-PROVIDED FIELDS (from the job board's structured data; treat as "
+        "authoritative unless the description clearly contradicts them):\n"
+        f"{lines}\n"
+    )
+
+
 def build_extract_structured(
     title: str,
     company_name: str,
@@ -176,16 +195,19 @@ def build_extract_structured(
     detected_language: str,
     description: str,
     correction: str = "",
+    source_hints: dict[str, str] | None = None,
 ) -> str:
     """SPEC 02 §4 structured EXTRACT user prompt from individual fields."""
     desc_truncated = description[:4000]
     correction_block = f"\nIMPORTANT: {correction}\n" if correction else ""
+    hints_block = _render_source_hints(source_hints)
     return (
         f"{correction_block}"
         f"TITLE: {title}\n"
         f"COMPANY: {company_name}\n"
         f"LOCATION: {location_raw}\n"
         f"DETECTED_LANGUAGE: {detected_language}\n"
+        f"{hints_block}"
         f"DESCRIPTION (truncated to 4000 chars):\n{desc_truncated}\n\n"
         f"Return JSON conforming to schema:\n{_EXTRACT_SCHEMA_STR}"
     )

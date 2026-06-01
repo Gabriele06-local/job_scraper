@@ -372,6 +372,7 @@ class ImportPipeline:
             "detected_language": raw.original_language or "unknown",
             "description": raw.description,
             "url": raw.url,
+            "source_hints": raw.source_hints,
         }
 
     def _raw_to_job(self, raw: RawJob, dedup_hash: str) -> Job:

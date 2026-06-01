@@ -524,6 +524,10 @@ class RawJob(BaseModel):
     currency: str | None = None
     original_language: str | None = None
     external_id: str | None = None
+    # Structured fields the source already provides (e.g. JSearch employment_type,
+    # remote_mode, seniority, skills). Passed to the AI as authoritative hints so
+    # the FAST tier answers confidently and escalates less often (token saving).
+    source_hints: dict[str, str] | None = None
 
     @field_validator("salary_min", "salary_max", mode="before")
     @classmethod

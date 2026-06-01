@@ -13,6 +13,16 @@ log = structlog.get_logger(__name__)
 _BASE_URL = "https://jsearch.p.rapidapi.com/search"
 _RAPIDAPI_HOST = "jsearch.p.rapidapi.com"
 _TIMEOUT = 30
+
+# JSearch employment-type tokens → pipeline EmploymentType enum values.
+_EMPLOYMENT_TYPE_MAP = {
+    "FULLTIME": "full_time",
+    "PARTTIME": "part_time",
+    "CONTRACTOR": "contract",
+    "CONTRACT": "contract",
+    "INTERN": "internship",
+    "INTERNSHIP": "internship",
+}
 _MAX_PAGES = 5  # 10 results/page → ~50 per keyword
 _KEYWORDS = [
     "software engineer",
@@ -92,6 +102,43 @@ class JSearchScraper:
         log.info("jsearch.fetch_complete", count=len(jobs))
         return jobs
 
+    @staticmethod
+    def _build_source_hints(item: dict) -> dict[str, str]:
+        """Extract structured fields JSearch /search already returns.
+
+        These become authoritative AI hints (employment_type, remote_mode,
+        seniority, skills), so the FAST classifier tier answers confidently and
+        escalates to the costlier STRUCT tier less often — saving AI tokens. Only
+        confident signals are emitted; ambiguous ones are left for the AI.
+        """
+        hints: dict[str, str] = {}
+
+        emp = str(item.get("job_employment_type") or "").strip().upper()
+        if emp in _EMPLOYMENT_TYPE_MAP:
+            hints["employment_type"] = _EMPLOYMENT_TYPE_MAP[emp]
+
+        # Only assert "remote": a False flag may still be hybrid, so stay silent.
+        if item.get("job_is_remote") is True:
+            hints["remote_mode"] = "remote"
+
+        exp = item.get("job_required_experience")
+        if isinstance(exp, dict):
+            months = exp.get("required_experience_in_months")
+            if exp.get("no_experience_required") is True or months == 0:
+                hints["seniority"] = "junior"
+            elif isinstance(months, int) and months >= 60:
+                hints["seniority"] = "senior"
+            elif isinstance(months, int) and 12 <= months < 60:
+                hints["seniority"] = "mid"
+
+        skills = item.get("job_required_skills")
+        if isinstance(skills, list):
+            cleaned = [str(s).strip() for s in skills if str(s).strip()][:15]
+            if cleaned:
+                hints["skills"] = ", ".join(cleaned)
+
+        return hints
+
     def _normalize(self, item: dict) -> dict | None:
         """Map a JSearch item to the RawJob dict shape used by the pipeline."""
         title = item.get("job_title") or ""
@@ -131,4 +178,5 @@ class JSearchScraper:
             "salary_max": int(sal_max) if sal_max else None,
             "currency": item.get("job_salary_currency"),
             "external_id": str(item.get("job_id", "")),
+            "source_hints": self._build_source_hints(item) or None,
         }
