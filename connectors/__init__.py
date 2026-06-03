@@ -22,6 +22,7 @@ from .aaannunci import AAAnnunciConnector
 from .active_jobs_db import ActiveJobsDbConnector
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
+from .erecruitment import ERecruitmentConnector
 from .careerjet import CareerJetConnector
 from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
@@ -70,6 +71,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "adzuna": ConnectorEntry(cls=AdzunaConnector, enabled=True),
     "careerjet": ConnectorEntry(cls=CareerJetConnector, enabled=True),
     "cercolavoro": ConnectorEntry(cls=CercolavoroConnector, enabled=True),
+    "erecruitment": ConnectorEntry(cls=ERecruitmentConnector, enabled=True),
     "jooble": ConnectorEntry(cls=JoobleConnector, enabled=True),
     "iprogrammatori": ConnectorEntry(cls=IProgrammatoriConnector, enabled=True),
     "arbeitnow": ConnectorEntry(cls=ArbeitnowConnector, enabled=True),
@@ -154,6 +156,7 @@ __all__ = [
     "CareerJetConnector",
     "CercolavoroConnector",
     "ConnectorEntry",
+    "ERecruitmentConnector",
     "FaangWatchConnector",
     "GreenhouseConnector",
     "HimalayasConnector",
