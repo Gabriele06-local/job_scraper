@@ -129,6 +129,17 @@ class CareerJetScraper:
                         break
         return jobs
 
+    @staticmethod
+    def _to_int(value: object) -> int | None:
+        """Coerce a salary value to int. CareerJet sends decimal strings
+        (e.g. "27255.54"), so int(str) would raise — go via float."""
+        if value is None or value == "":
+            return None
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
     def _normalize(self, item: dict, locale: str, keyword: str) -> dict | None:
         title = item.get("title") or ""
         company = item.get("company") or ""
@@ -148,8 +159,8 @@ class CareerJetScraper:
             "original_language": locale[:2],
             "published_at": item.get("date"),
             "location_raw": item.get("locations", [None])[0] if isinstance(item.get("locations"), list) else item.get("locations"),
-            "salary_min": int(sal_min) if sal_min else None,
-            "salary_max": int(sal_max) if sal_max else None,
+            "salary_min": self._to_int(sal_min),
+            "salary_max": self._to_int(sal_max),
             "currency": currency,
             "external_id": str(item.get("id", "")),
             "source_hints": {"keyword": keyword, "locale": locale},
