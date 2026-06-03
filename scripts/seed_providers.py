@@ -109,6 +109,26 @@ _SEED: list[ProviderSeed] = [
         "https://www.iprogrammatori.it/",
         "Free IT-focused RSS/HTML feed.",
     ),
+    ProviderSeed(
+        "cercolavoro", "Cercolavoro", "free", "rss", "IT",
+        "https://www.cercolavoro.com/rss/genera.html",
+        "Italian job board with customizable RSS feeds by keyword/location.",
+    ),
+    ProviderSeed(
+        "jobnetwork", "JobNetwork", "free", "rss", "IT",
+        "https://www.jobnetwork.it/pub/rss.php",
+        "Italian job portal RSS feed, general listings across all sectors.",
+    ),
+    ProviderSeed(
+        "portalelavoro", "PortaleLavoro", "free", "rss", "IT",
+        "https://www.portalelavoro.org/feed",
+        "WordPress-based Italian job board, general listings.",
+    ),
+    ProviderSeed(
+        "aaannunci", "AAAnnunci", "free", "rss", "IT",
+        "https://www.aaannunci.it/rss.aspx?cat=lavoro&subcat=informatica",
+        "Italian classifieds, IT/Informatica category RSS feed.",
+    ),
     # --- free, ATS public job boards (no auth) ---
     ProviderSeed(
         "greenhouse", "Greenhouse", "free", "ats", "Global",

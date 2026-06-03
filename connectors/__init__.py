@@ -18,12 +18,14 @@ import structlog
 
 from config import settings
 
+from .aaannunci import AAAnnunciConnector
 from .active_jobs_db import ActiveJobsDbConnector
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
 from .careerjet import CareerJetConnector
 from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
+from .cercolavoro import CercolavoroConnector
 from .faang_watch import FaangWatchConnector
 from .greenhouse import GreenhouseConnector
 from .himalayas import HimalayasConnector
@@ -31,10 +33,12 @@ from .hn_hiring import HNHiringConnector
 from .hn_realtime import HNRealtimeConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
+from .jobnetwork import JobNetworkConnector
 from .jooble import JoobleConnector
 from .jsearch import JSearchConnector
 from .lever import LeverConnector
 from .personio import PersonioConnector
+from .portalelavoro import PortaleLavoroConnector
 from .reed import ReedConnector
 from .remoteok import RemoteOKConnector
 from .remotive import RemotiveConnector
@@ -62,8 +66,10 @@ class ConnectorEntry:
 # Static registry — enabled flag reflects code-level known-good state.
 # Runtime override via settings.disabled_connectors.
 REGISTRY: dict[str, ConnectorEntry] = {
+    "aaannunci": ConnectorEntry(cls=AAAnnunciConnector, enabled=True),
     "adzuna": ConnectorEntry(cls=AdzunaConnector, enabled=True),
     "careerjet": ConnectorEntry(cls=CareerJetConnector, enabled=True),
+    "cercolavoro": ConnectorEntry(cls=CercolavoroConnector, enabled=True),
     "jooble": ConnectorEntry(cls=JoobleConnector, enabled=True),
     "iprogrammatori": ConnectorEntry(cls=IProgrammatoriConnector, enabled=True),
     "arbeitnow": ConnectorEntry(cls=ArbeitnowConnector, enabled=True),
@@ -71,6 +77,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "jobicy": ConnectorEntry(cls=JobicyConnector, enabled=True),
     "rss": ConnectorEntry(cls=RSSConnector, enabled=True),
     "himalayas": ConnectorEntry(cls=HimalayasConnector, enabled=True),
+    "jobnetwork": ConnectorEntry(cls=JobNetworkConnector, enabled=True),
     "remotive": ConnectorEntry(cls=RemotiveConnector, enabled=True),
     "themuse": ConnectorEntry(cls=TheMuseConnector, enabled=True),
     "reed": ConnectorEntry(cls=ReedConnector, enabled=True),
@@ -79,6 +86,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "lever": ConnectorEntry(cls=LeverConnector, enabled=True),
     "ashby": ConnectorEntry(cls=AshbyConnector, enabled=True),
     "personio": ConnectorEntry(cls=PersonioConnector, enabled=True),
+    "portalelavoro": ConnectorEntry(cls=PortaleLavoroConnector, enabled=True),
     # New RapidAPI connectors — code-level enabled, DB-gated (disabled by
     # default in seed_providers; enable per-slug from the backoffice).
     "active_jobs_db": ConnectorEntry(cls=ActiveJobsDbConnector, enabled=True),
@@ -137,12 +145,14 @@ def get_enabled_connectors() -> list[BaseConnector]:
 
 
 __all__ = [
+    "AAAnnunciConnector",
     "ActiveJobsDbConnector",
     "AdzunaConnector",
     "ArbeitnowConnector",
     "AshbyConnector",
     "BaseConnector",
     "CareerJetConnector",
+    "CercolavoroConnector",
     "ConnectorEntry",
     "FaangWatchConnector",
     "GreenhouseConnector",
@@ -151,10 +161,12 @@ __all__ = [
     "HNRealtimeConnector",
     "IProgrammatoriConnector",
     "JobicyConnector",
+    "JobNetworkConnector",
     "JoobleConnector",
     "JSearchConnector",
     "LeverConnector",
     "PersonioConnector",
+    "PortaleLavoroConnector",
     "REGISTRY",
     "ReedConnector",
     "RemoteOKConnector",
