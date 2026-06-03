@@ -10,7 +10,15 @@ from utils.retry import safe_get
 
 log = structlog.get_logger(__name__)
 
-_BASE_URL = "https://public.api.careerjet.net/search"
+# The public CareerJet API serves over HTTP only (port 443 is closed → the
+# HTTPS variant fails with "connection refused"). It also rejects calls without
+# a Referer header ("Undeclared referrer"), so both are required.
+_BASE_URL = "http://public.api.careerjet.net/search"
+_REFERER = "https://devboards.io/jobs"
+_HEADERS = {
+    "Referer": _REFERER,
+    "User-Agent": "DevBoardsCareerJetConnector/1.0",
+}
 _KEYWORDS = [
     "software engineer",
     "software developer",
@@ -72,8 +80,9 @@ class CareerJetScraper:
                                 "pagesize": _RESULTS_PER_PAGE,
                                 "user_ip": "0.0.0.0",
                                 "user_agent": "DevBoardsCareerJetConnector/1.0",
-                                "url": "https://devboards.io/jobs",
+                                "url": _REFERER,
                             },
+                            headers=_HEADERS,
                             timeout=_TIMEOUT,
                         )
                         resp.raise_for_status()
@@ -84,8 +93,11 @@ class CareerJetScraper:
                         if not results:
                             break
                         for item in results:
-                            eid = item.get("id", "")
-                            if eid in seen_ids:
+                            # CareerJet items carry no stable id; the url is the
+                            # unique key. Keying on a missing "id" collapsed every
+                            # page down to a single job.
+                            eid = item.get("url", "")
+                            if not eid or eid in seen_ids:
                                 continue
                             seen_ids.add(eid)
                             normalized = self._normalize(item, locale, keyword)
