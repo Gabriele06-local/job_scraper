@@ -88,6 +88,16 @@ class CareerJetScraper:
                         resp.raise_for_status()
                         data = resp.json()
                         if data.get("type") != "JOBS":
+                            # 200 OK but not a results payload (e.g. affiliate /
+                            # referrer / quota error). Surface it instead of
+                            # silently yielding zero jobs.
+                            log.warning(
+                                "careerjet.non_jobs_response",
+                                locale=locale,
+                                keyword=keyword,
+                                type=data.get("type"),
+                                error=data.get("error"),
+                            )
                             break
                         results = data.get("jobs", [])
                         if not results:
