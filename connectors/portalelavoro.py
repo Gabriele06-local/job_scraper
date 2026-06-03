@@ -27,8 +27,11 @@ class PortaleLavoroConnector(BaseConnector):
 
     def fetch(self) -> Iterator[dict]:
         try:
-            jobs = asyncio.run(self._scraper.scrape(keyword="", lang="it"))
-            log.debug("portalelavoro.fetched", count=len(jobs))
-            yield from jobs
+            all_jobs = asyncio.run(self._scraper.scrape(keyword="", lang="it"))
+            filtered = [j for j in all_jobs if "/lavoro/" in j.get("url", "")]
+            skipped = len(all_jobs) - len(filtered)
+            if skipped:
+                log.info("portalelavoro.filtered", total=len(all_jobs), kept=len(filtered), skipped=skipped)
+            yield from filtered
         except Exception as exc:
             log.error("portalelavoro.fetch_error", error=str(exc))
