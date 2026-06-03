@@ -129,6 +129,11 @@ _SEED: list[ProviderSeed] = [
         "https://www.aaannunci.it/rss.aspx?cat=lavoro&subcat=informatica",
         "Italian classifieds, IT/Informatica category RSS feed.",
     ),
+    ProviderSeed(
+        "erecruitment", "E-Recruitment", "free", "rss", "IT",
+        "https://www.e-recruitment.it/rss/",
+        "Italian job board RSS feed, general listings across sectors.",
+    ),
     # --- free, ATS public job boards (no auth) ---
     ProviderSeed(
         "greenhouse", "Greenhouse", "free", "ats", "Global",
