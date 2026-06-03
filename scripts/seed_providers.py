@@ -109,6 +109,31 @@ _SEED: list[ProviderSeed] = [
         "https://www.iprogrammatori.it/",
         "Free IT-focused RSS/HTML feed.",
     ),
+    ProviderSeed(
+        "cercolavoro", "Cercolavoro", "free", "rss", "IT",
+        "https://www.cercolavoro.com/rss/genera.html",
+        "Italian job board with customizable RSS feeds by keyword/location.",
+    ),
+    ProviderSeed(
+        "jobnetwork", "JobNetwork", "free", "rss", "IT",
+        "https://www.jobnetwork.it/pub/rss.php",
+        "Italian job portal RSS feed, general listings across all sectors.",
+    ),
+    ProviderSeed(
+        "portalelavoro", "PortaleLavoro", "free", "rss", "IT",
+        "https://www.portalelavoro.org/feed",
+        "WordPress-based Italian job board, general listings.",
+    ),
+    ProviderSeed(
+        "aaannunci", "AAAnnunci", "free", "rss", "IT",
+        "https://www.aaannunci.it/rss.aspx?cat=lavoro&subcat=informatica",
+        "Italian classifieds, IT/Informatica category RSS feed.",
+    ),
+    ProviderSeed(
+        "erecruitment", "E-Recruitment", "free", "rss", "IT",
+        "https://www.e-recruitment.it/rss/",
+        "Italian job board RSS feed, general listings across sectors.",
+    ),
     # --- free, ATS public job boards (no auth) ---
     ProviderSeed(
         "greenhouse", "Greenhouse", "free", "ats", "Global",
@@ -160,6 +185,14 @@ _SEED: list[ProviderSeed] = [
         auth_env_vars=["RAPIDAPI_KEY"],
     ),
     # --- freemium: free tier now, paid plan required to scale ---
+    ProviderSeed(
+        "careerjet", "CareerJet", "freemium", "api",
+        "IT,ES,FR,DE,GB,IE,NL",
+        "https://www.careerjet.com/partners/api/",
+        "International job search engine. Free tier covers 7 European locales "
+        "including Italy (it_IT). Paid plan to lift quota.",
+        auth_env_vars=["CAREERJET_API_KEY"],
+    ),
     ProviderSeed(
         "adzuna", "Adzuna", "freemium", "api",
         "gb,us,de,nl,fr,au,ca,at,be,nz",

@@ -12,7 +12,7 @@ logger = structlog.get_logger(__name__)
 class AdzunaScraper(BaseScraper):
     """Scraper for Adzuna API (supports multiple countries)."""
 
-    COUNTRIES = ["gb", "us", "de", "nl", "fr", "au", "ca", "at", "be", "nz"]
+    COUNTRIES = ["gb", "us", "de", "nl", "fr", "au", "ca", "at", "be", "nz", "it"]
 
     def __init__(self, app_id: str, app_key: str):
         self.app_id = app_id

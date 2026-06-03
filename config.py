@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # Connector auth
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
+    careerjet_api_key: str = ""
     jooble_api_key: str = ""
     reed_api_key: str = ""
     themuse_api_key: str = ""
