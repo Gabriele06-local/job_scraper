@@ -161,6 +161,14 @@ _SEED: list[ProviderSeed] = [
     ),
     # --- freemium: free tier now, paid plan required to scale ---
     ProviderSeed(
+        "careerjet", "CareerJet", "freemium", "api",
+        "IT,ES,FR,DE,GB,IE,NL",
+        "https://www.careerjet.com/partners/api/",
+        "International job search engine. Free tier covers 7 European locales "
+        "including Italy (it_IT). Paid plan to lift quota.",
+        auth_env_vars=["CAREERJET_API_KEY"],
+    ),
+    ProviderSeed(
         "adzuna", "Adzuna", "freemium", "api",
         "gb,us,de,nl,fr,au,ca,at,be,nz",
         "https://developer.adzuna.com/",

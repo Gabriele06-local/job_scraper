@@ -21,6 +21,7 @@ from config import settings
 from .active_jobs_db import ActiveJobsDbConnector
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
+from .careerjet import CareerJetConnector
 from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
 from .faang_watch import FaangWatchConnector
@@ -62,6 +63,7 @@ class ConnectorEntry:
 # Runtime override via settings.disabled_connectors.
 REGISTRY: dict[str, ConnectorEntry] = {
     "adzuna": ConnectorEntry(cls=AdzunaConnector, enabled=True),
+    "careerjet": ConnectorEntry(cls=CareerJetConnector, enabled=True),
     "jooble": ConnectorEntry(cls=JoobleConnector, enabled=True),
     "iprogrammatori": ConnectorEntry(cls=IProgrammatoriConnector, enabled=True),
     "arbeitnow": ConnectorEntry(cls=ArbeitnowConnector, enabled=True),
@@ -140,6 +142,7 @@ __all__ = [
     "ArbeitnowConnector",
     "AshbyConnector",
     "BaseConnector",
+    "CareerJetConnector",
     "ConnectorEntry",
     "FaangWatchConnector",
     "GreenhouseConnector",
