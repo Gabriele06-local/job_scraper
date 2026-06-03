@@ -111,13 +111,13 @@ _SEED: list[ProviderSeed] = [
     ),
     ProviderSeed(
         "cercolavoro", "Cercolavoro", "free", "rss", "IT",
-        "https://www.cercolavoro.com/rss/genera.html",
-        "Italian job board with customizable RSS feeds by keyword/location.",
+        "http://www.cercolavoro.com/rss/offerte+lavoro+rss.jsp",
+        "Italian job board RSS feed of latest offers.",
     ),
     ProviderSeed(
         "jobnetwork", "JobNetwork", "free", "rss", "IT",
-        "https://www.jobnetwork.it/pub/rss.php",
-        "Italian job portal RSS feed, general listings across all sectors.",
+        "https://www.jobnetwork.it/rss/homepage.xml",
+        "Italian job portal feed (custom <annuncio> schema), general listings.",
     ),
     ProviderSeed(
         "portalelavoro", "PortaleLavoro", "free", "rss", "IT",

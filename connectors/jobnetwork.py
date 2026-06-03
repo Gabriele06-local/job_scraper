@@ -7,7 +7,7 @@ from collections.abc import Iterator
 
 import structlog
 
-from scrapers.italian_rss_scraper import ItalianRSSScraper
+from scrapers.jobnetwork_scraper import JobNetworkScraper
 
 from .base import BaseConnector, SourceType
 
@@ -20,8 +20,10 @@ class JobNetworkConnector(BaseConnector):
     rate_limit_seconds = 1.0
 
     def __init__(self) -> None:
-        self._scraper = ItalianRSSScraper(
-            feed_url="https://www.jobnetwork.it/pub/rss.php",
+        # /pub/rss.php is an HTML landing page; the real feed is homepage.xml,
+        # which uses a custom <annuncio> schema (see JobNetworkScraper).
+        self._scraper = JobNetworkScraper(
+            feed_url="https://www.jobnetwork.it/rss/homepage.xml",
             source_name="JobNetwork",
         )
 
