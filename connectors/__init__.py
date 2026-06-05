@@ -26,6 +26,7 @@ from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
 from .careerjet import CareerJetConnector
 from .cercolavoro import CercolavoroConnector
+from .conquistedellavoro import ConquisteDelLavoroConnector
 from .erecruitment import ERecruitmentConnector
 from .faang_watch import FaangWatchConnector
 from .greenhouse import GreenhouseConnector
@@ -72,6 +73,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "adzuna": ConnectorEntry(cls=AdzunaConnector, enabled=True),
     "careerjet": ConnectorEntry(cls=CareerJetConnector, enabled=True),
     "cercolavoro": ConnectorEntry(cls=CercolavoroConnector, enabled=True),
+    "conquistedellavoro": ConnectorEntry(cls=ConquisteDelLavoroConnector, enabled=True),
     "erecruitment": ConnectorEntry(cls=ERecruitmentConnector, enabled=True),
     "jooble": ConnectorEntry(cls=JoobleConnector, enabled=True),
     "iprogrammatori": ConnectorEntry(cls=IProgrammatoriConnector, enabled=True),
@@ -157,6 +159,7 @@ __all__ = [
     "BaseConnector",
     "CareerJetConnector",
     "CercolavoroConnector",
+    "ConquisteDelLavoroConnector",
     "ConnectorEntry",
     "ERecruitmentConnector",
     "FaangWatchConnector",
