@@ -134,16 +134,6 @@ _SEED: list[ProviderSeed] = [
         "https://www.e-recruitment.it/rss/",
         "Italian job board RSS feed, general listings across sectors.",
     ),
-    ProviderSeed(
-        "joblist", "JobList", "free", "rss", "IT",
-        "https://www.joblist.it/rss/informatica-e-web/",
-        "Italian job board, Informatica e Web category RSS feed.",
-    ),
-    ProviderSeed(
-        "conquistedellavoro", "Conquiste del Lavoro", "free", "rss", "IT",
-        "https://www.conquistedellavoro.it/",
-        "Italian labour news portal, Pubblico Impiego RSS feed. Articles, not structured job listings — quality gate filters out non-job content.",
-    ),
     # --- free, ATS public job boards (no auth) ---
     ProviderSeed(
         "greenhouse", "Greenhouse", "free", "ats", "Global",

@@ -26,7 +26,6 @@ from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
 from .careerjet import CareerJetConnector
 from .cercolavoro import CercolavoroConnector
-from .conquistedellavoro import ConquisteDelLavoroConnector
 from .erecruitment import ERecruitmentConnector
 from .faang_watch import FaangWatchConnector
 from .greenhouse import GreenhouseConnector
@@ -35,7 +34,6 @@ from .hn_hiring import HNHiringConnector
 from .hn_realtime import HNRealtimeConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
-from .joblist import JobListConnector
 from .jobnetwork import JobNetworkConnector
 from .jooble import JoobleConnector
 from .jsearch import JSearchConnector
@@ -73,14 +71,12 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "adzuna": ConnectorEntry(cls=AdzunaConnector, enabled=True),
     "careerjet": ConnectorEntry(cls=CareerJetConnector, enabled=True),
     "cercolavoro": ConnectorEntry(cls=CercolavoroConnector, enabled=True),
-    "conquistedellavoro": ConnectorEntry(cls=ConquisteDelLavoroConnector, enabled=True),
     "erecruitment": ConnectorEntry(cls=ERecruitmentConnector, enabled=True),
     "jooble": ConnectorEntry(cls=JoobleConnector, enabled=True),
     "iprogrammatori": ConnectorEntry(cls=IProgrammatoriConnector, enabled=True),
     "arbeitnow": ConnectorEntry(cls=ArbeitnowConnector, enabled=True),
     "remoteok": ConnectorEntry(cls=RemoteOKConnector, enabled=True),
     "jobicy": ConnectorEntry(cls=JobicyConnector, enabled=True),
-    "joblist": ConnectorEntry(cls=JobListConnector, enabled=True),
     "rss": ConnectorEntry(cls=RSSConnector, enabled=True),
     "himalayas": ConnectorEntry(cls=HimalayasConnector, enabled=True),
     "jobnetwork": ConnectorEntry(cls=JobNetworkConnector, enabled=True),
@@ -159,7 +155,6 @@ __all__ = [
     "BaseConnector",
     "CareerJetConnector",
     "CercolavoroConnector",
-    "ConquisteDelLavoroConnector",
     "ConnectorEntry",
     "ERecruitmentConnector",
     "FaangWatchConnector",
@@ -169,7 +164,6 @@ __all__ = [
     "HNRealtimeConnector",
     "IProgrammatoriConnector",
     "JobicyConnector",
-    "JobListConnector",
     "JobNetworkConnector",
     "JoobleConnector",
     "JSearchConnector",
