@@ -27,7 +27,7 @@ import structlog
 
 from ai.cache import CacheBackend, default_cache
 from ai.provider import GroqProvider, LLMError, LLMProvider, LLMTransientError
-from ai.tasks import ESCALATION_HINT, TIER_ORDER, AITask, TaskConfig, Tier, TASK_CONFIG
+from ai.tasks import ESCALATION_HINT, TASK_CONFIG, TIER_ORDER, AITask, TaskConfig, Tier
 from ai.telemetry import AICallRecord, CostTracker, cost_tracker
 from config import settings
 

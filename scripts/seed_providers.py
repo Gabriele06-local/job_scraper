@@ -134,6 +134,11 @@ _SEED: list[ProviderSeed] = [
         "https://www.e-recruitment.it/rss/",
         "Italian job board RSS feed, general listings across sectors.",
     ),
+    ProviderSeed(
+        "joblist", "JobList", "free", "rss", "IT",
+        "https://www.joblist.it/rss/informatica-e-web/",
+        "Italian job board, Informatica e Web category RSS feed.",
+    ),
     # --- free, ATS public job boards (no auth) ---
     ProviderSeed(
         "greenhouse", "Greenhouse", "free", "ats", "Global",

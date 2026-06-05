@@ -5,14 +5,11 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-import pytest
-
 from ai.cache import InMemoryLRUCache, NullCache, default_cache, make_cache_key
 from ai.provider import LLMResponse
 from ai.router import ModelRouter, ParseError
 from ai.tasks import AITask
 from ai.telemetry import CostTracker
-
 
 # -- key + backends --------------------------------------------------------
 

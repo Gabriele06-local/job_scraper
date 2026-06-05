@@ -22,11 +22,11 @@ from .aaannunci import AAAnnunciConnector
 from .active_jobs_db import ActiveJobsDbConnector
 from .adzuna import AdzunaConnector
 from .arbeitnow import ArbeitnowConnector
-from .erecruitment import ERecruitmentConnector
-from .careerjet import CareerJetConnector
 from .ashby import AshbyConnector
 from .base import BaseConnector, SourceType
+from .careerjet import CareerJetConnector
 from .cercolavoro import CercolavoroConnector
+from .erecruitment import ERecruitmentConnector
 from .faang_watch import FaangWatchConnector
 from .greenhouse import GreenhouseConnector
 from .himalayas import HimalayasConnector
@@ -34,6 +34,7 @@ from .hn_hiring import HNHiringConnector
 from .hn_realtime import HNRealtimeConnector
 from .iprogrammatori import IProgrammatoriConnector
 from .jobicy import JobicyConnector
+from .joblist import JobListConnector
 from .jobnetwork import JobNetworkConnector
 from .jooble import JoobleConnector
 from .jsearch import JSearchConnector
@@ -77,6 +78,7 @@ REGISTRY: dict[str, ConnectorEntry] = {
     "arbeitnow": ConnectorEntry(cls=ArbeitnowConnector, enabled=True),
     "remoteok": ConnectorEntry(cls=RemoteOKConnector, enabled=True),
     "jobicy": ConnectorEntry(cls=JobicyConnector, enabled=True),
+    "joblist": ConnectorEntry(cls=JobListConnector, enabled=True),
     "rss": ConnectorEntry(cls=RSSConnector, enabled=True),
     "himalayas": ConnectorEntry(cls=HimalayasConnector, enabled=True),
     "jobnetwork": ConnectorEntry(cls=JobNetworkConnector, enabled=True),
@@ -164,6 +166,7 @@ __all__ = [
     "HNRealtimeConnector",
     "IProgrammatoriConnector",
     "JobicyConnector",
+    "JobListConnector",
     "JobNetworkConnector",
     "JoobleConnector",
     "JSearchConnector",
